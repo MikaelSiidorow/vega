@@ -28,8 +28,12 @@ nonisolated struct InstanceURL: Equatable, Sendable {
         }
 
         components.scheme = "https"
-        while components.path.count > 1 && components.path.hasSuffix("/") {
-            components.path.removeLast()
+        if components.path.isEmpty {
+            components.path = "/"
+        } else {
+            while components.path.count > 1 && components.path.hasSuffix("/") {
+                components.path.removeLast()
+            }
         }
 
         guard let normalizedURL = components.url else {

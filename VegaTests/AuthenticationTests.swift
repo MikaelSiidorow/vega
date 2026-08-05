@@ -21,7 +21,7 @@ nonisolated struct AuthenticationTests {
             }
         )
 
-        let instance = try InstanceURL("  wger.example/  ")
+        let instance = try InstanceURL("  wger.example  ")
         let session = try await client.signIn(
             instance: instance,
             username: "test-user",
