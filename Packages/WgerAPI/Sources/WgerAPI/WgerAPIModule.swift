@@ -1,4 +1,3 @@
-/// Namespace for handwritten helpers around the generated wger API.
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
@@ -48,9 +47,10 @@ public struct BearerAuthenticationMiddleware: ClientMiddleware {
         body: HTTPBody?,
         baseURL: URL,
         operationID: String,
-        next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (
-            HTTPResponse, HTTPBody?
-        )
+        next:
+            @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (
+                HTTPResponse, HTTPBody?
+            )
     ) async throws -> (HTTPResponse, HTTPBody?) {
         var request = request
         request.headerFields[.authorization] = "Bearer \(accessToken)"
