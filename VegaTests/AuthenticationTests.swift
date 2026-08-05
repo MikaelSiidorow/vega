@@ -126,6 +126,77 @@ struct AuthenticationTests {
             )
         }
     }
+
+    @Test
+    func refreshesAndRotatesCredentials() async throws {
+        let recorder = RequestRecorder()
+        let client = AllauthClient(
+            transport: StubHTTPTransport { request in
+                await recorder.record(request)
+                return try response(
+                    status: 200,
+                    body:
+                        #"{"data":{"access_token":"new-access","refresh_token":"new-refresh"}}"#
+                )
+            }
+        )
+
+        let session = try await client.refresh(
+            instance: InstanceURL("https://wger.example"),
+            refreshToken: "old-refresh"
+        )
+
+        #expect(
+            session
+                == AuthenticationSession(
+                    accessToken: "new-access",
+                    refreshToken: "new-refresh"
+                )
+        )
+        let request = try #require(await recorder.request)
+        #expect(
+            request.url?.absoluteString
+                == "https://wger.example/allauth/app/v1/tokens/refresh"
+        )
+        let body = try #require(request.httpBody)
+        let payload = try JSONSerialization.jsonObject(with: body) as? [String: String]
+        #expect(payload?["refresh_token"] == "old-refresh")
+    }
+
+    @Test
+    func reportsRejectedRefreshCredential() async throws {
+        let client = AllauthClient(
+            transport: StubHTTPTransport { _ in
+                try response(status: 401)
+            }
+        )
+
+        await #expect(throws: AuthenticationError.expiredSession) {
+            try await client.refresh(
+                instance: InstanceURL("https://wger.example"),
+                refreshToken: "expired"
+            )
+        }
+    }
+
+    @Test
+    func rejectsRefreshResponseWithoutRotatedCredentials() async throws {
+        let client = AllauthClient(
+            transport: StubHTTPTransport { _ in
+                try response(
+                    status: 200,
+                    body: #"{"data":{"access_token":"access"}}"#
+                )
+            }
+        )
+
+        await #expect(throws: AuthenticationError.malformedResponse) {
+            try await client.refresh(
+                instance: InstanceURL("https://wger.example"),
+                refreshToken: "refresh"
+            )
+        }
+    }
 }
 
 private struct StubHTTPTransport: HTTPTransport {

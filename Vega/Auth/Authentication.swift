@@ -59,6 +59,7 @@ enum AuthenticationError: Error, Equatable, Sendable {
     case mfaRequired(MFAChallenge)
     case rateLimited(retryAfter: String?)
     case malformedResponse
+    case expiredSession
     case unexpectedStatus(Int, String?)
     case network
 }
@@ -80,6 +81,8 @@ extension AuthenticationError: LocalizedError {
             return "Too many sign-in attempts. Please wait and try again."
         case .malformedResponse:
             return "The server returned an unexpected sign-in response."
+        case .expiredSession:
+            return "Your saved session has expired. Sign in again."
         case .unexpectedStatus(_, let message):
             return message ?? "The server could not complete sign-in."
         case .network:
@@ -116,7 +119,14 @@ protocol AuthenticationClient: Sendable {
     ) async throws -> AuthenticationSession
 }
 
-struct AllauthClient: AuthenticationClient {
+protocol SessionRefreshing: Sendable {
+    func refresh(
+        instance: InstanceURL,
+        refreshToken: String
+    ) async throws -> AuthenticationSession
+}
+
+struct AllauthClient: AuthenticationClient, SessionRefreshing {
     private let transport: any HTTPTransport
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -172,11 +182,90 @@ struct AllauthClient: AuthenticationClient {
             )
         }
     }
+
+    func refresh(
+        instance: InstanceURL,
+        refreshToken: String
+    ) async throws -> AuthenticationSession {
+        var request = URLRequest(url: instance.appending(path: "allauth/app/v1/tokens/refresh"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(RefreshRequest(refreshToken: refreshToken))
+
+        let data: Data
+        let response: HTTPURLResponse
+        do {
+            (data, response) = try await transport.data(for: request)
+        } catch let error as AuthenticationError {
+            throw error
+        } catch {
+            throw AuthenticationError.network
+        }
+
+        let envelope = try? decoder.decode(RefreshEnvelope.self, from: data)
+        switch response.statusCode {
+        case 200...299:
+            guard let accessToken = envelope?.data.accessToken,
+                let refreshToken = envelope?.data.refreshToken,
+                !accessToken.isEmpty,
+                !refreshToken.isEmpty
+            else {
+                throw AuthenticationError.malformedResponse
+            }
+            return AuthenticationSession(
+                accessToken: accessToken,
+                refreshToken: refreshToken
+            )
+        case 401:
+            throw AuthenticationError.expiredSession
+        case 429:
+            throw AuthenticationError.rateLimited(
+                retryAfter: response.value(forHTTPHeaderField: "Retry-After")
+            )
+        default:
+            throw AuthenticationError.unexpectedStatus(
+                response.statusCode,
+                envelope?.firstErrorMessage
+            )
+        }
+    }
 }
 
 private struct LoginRequest: Encodable {
     let username: String
     let password: String
+}
+
+private struct RefreshRequest: Encodable {
+    let refreshToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case refreshToken = "refresh_token"
+    }
+}
+
+private struct RefreshEnvelope: Decodable {
+    struct DataPayload: Decodable {
+        let accessToken: String?
+        let refreshToken: String?
+
+        enum CodingKeys: String, CodingKey {
+            case accessToken = "access_token"
+            case refreshToken = "refresh_token"
+        }
+    }
+
+    struct APIError: Decodable {
+        let message: String?
+    }
+
+    let data: DataPayload
+    let errors: [APIError]?
+
+    var firstErrorMessage: String? {
+        errors?.compactMap(\.message).first
+    }
 }
 
 private struct LoginEnvelope: Decodable {
