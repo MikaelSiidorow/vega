@@ -24,6 +24,11 @@ final class VegaUITests: XCTestCase {
         XCTAssertTrue(app.textFields["Username or email"].exists)
         XCTAssertTrue(app.secureTextFields["Password"].exists)
         XCTAssertTrue(app.buttons["Sign in"].exists)
+
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Sign-in form"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 
 }
