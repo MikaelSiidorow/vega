@@ -1,4 +1,5 @@
 import Testing
+
 @testable import Vega
 
 struct VegaTests {
