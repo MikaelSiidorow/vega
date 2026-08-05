@@ -22,6 +22,10 @@ DerivedData/
 build/
 .build/
 
+# The app's Xcode workspace owns dependency resolution for local packages
+/Packages/*/Package.resolved
+/Packages/*/.swiftpm/
+
 # App artifacts
 *.ipa
 *.dSYM

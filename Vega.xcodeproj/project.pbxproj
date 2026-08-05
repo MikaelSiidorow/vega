@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* WgerAPI in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000002 /* WgerAPI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		73FA6249302310810023300C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000001 /* WgerAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = Vega;
 			packageProductDependencies = (
+				A10000000000000000000002 /* WgerAPI */,
 			);
 			productName = Vega;
 			productReference = 73FA623B302310800023300C /* Vega.app */;
@@ -197,6 +203,9 @@
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73FA623C302310800023300C /* Products */;
+			packageReferences = (
+				A10000000000000000000003 /* XCLocalSwiftPackageReference "WgerAPI" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -531,6 +540,21 @@
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000003 /* XCLocalSwiftPackageReference "WgerAPI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WgerAPI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000002 /* WgerAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000003 /* XCLocalSwiftPackageReference "WgerAPI" */;
+			productName = WgerAPI;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCConfigurationList section */
 		73FA6236302310800023300C /* Build configuration list for PBXProject "Vega" */ = {
