@@ -18,6 +18,7 @@ final class VegaUITests: XCTestCase {
     @MainActor
     func testShowsSignInForm() throws {
         let app = XCUIApplication()
+        app.launchArguments.append("-skipSessionRestore")
         app.launch()
 
         XCTAssertTrue(app.textFields["Instance URL"].waitForExistence(timeout: 5))

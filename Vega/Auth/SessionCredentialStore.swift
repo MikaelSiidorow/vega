@@ -4,17 +4,28 @@ import Foundation
     import Security
 #endif
 
-struct StoredSession: Equatable, Sendable {
+nonisolated struct StoredSession: Equatable, Sendable {
     let instanceAddress: String
     let refreshToken: String
 }
 
-enum SessionPersistenceError: Error, Equatable, Sendable {
+nonisolated enum SessionPersistenceError: Error, Equatable, Sendable {
     case unavailable
     case keychain(Int32)
 }
 
-protocol SessionCredentialStoring: Sendable {
+extension SessionPersistenceError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .unavailable:
+            return "Secure session storage is unavailable on this device."
+        case .keychain:
+            return "Vega could not access the saved session securely."
+        }
+    }
+}
+
+nonisolated protocol SessionCredentialStoring: Sendable {
     func load() async throws -> StoredSession?
     func save(_ session: StoredSession) async throws
     func clear() async throws

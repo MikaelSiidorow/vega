@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct ContentView: View {
@@ -7,9 +8,17 @@ struct ContentView: View {
         NavigationStack {
             if let account = model.connectedAccount {
                 connectedView(account)
+            } else if model.isRestoringSession {
+                ProgressView("Restoring session…")
             } else {
                 signInForm
             }
+        }
+        .task {
+            guard !ProcessInfo.processInfo.arguments.contains("-skipSessionRestore") else {
+                return
+            }
+            await model.restoreSession()
         }
     }
 
@@ -30,7 +39,7 @@ struct ContentView: View {
             } header: {
                 Text("Connect to wger")
             } footer: {
-                Text("Credentials are used only to sign in and are not stored yet.")
+                Text("Your password is used only to sign in. The session is stored securely.")
             }
 
             if let errorMessage = model.errorMessage {
@@ -67,7 +76,9 @@ struct ContentView: View {
                 Text(planSummary(account.nutritionPlanCount))
             }
         } actions: {
-            Button("Sign out", role: .destructive, action: model.signOut)
+            Button("Sign out", role: .destructive) {
+                Task { await model.signOut() }
+            }
         }
         .navigationTitle("Vega")
     }

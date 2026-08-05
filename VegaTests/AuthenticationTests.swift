@@ -3,7 +3,11 @@ import Testing
 
 @testable import Vega
 
-struct AuthenticationTests {
+#if canImport(FoundationNetworking)
+    import FoundationNetworking
+#endif
+
+nonisolated struct AuthenticationTests {
     @Test
     func normalizesInstanceAndDecodesSuccessfulLogin() async throws {
         let recorder = RequestRecorder()
@@ -199,7 +203,7 @@ struct AuthenticationTests {
     }
 }
 
-private struct StubHTTPTransport: HTTPTransport {
+private nonisolated struct StubHTTPTransport: HTTPTransport {
     let handler: @Sendable (URLRequest) async throws -> (Data, HTTPURLResponse)
 
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -215,7 +219,7 @@ private actor RequestRecorder {
     }
 }
 
-private func response(
+private nonisolated func response(
     status: Int,
     headers: [String: String] = [:],
     body: String = ""

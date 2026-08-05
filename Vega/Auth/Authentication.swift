@@ -4,7 +4,7 @@ import Foundation
     import FoundationNetworking
 #endif
 
-struct InstanceURL: Equatable, Sendable {
+nonisolated struct InstanceURL: Equatable, Sendable {
     let url: URL
 
     init(_ address: String) throws {
@@ -43,17 +43,17 @@ struct InstanceURL: Equatable, Sendable {
     }
 }
 
-struct AuthenticationSession: Equatable, Sendable {
+nonisolated struct AuthenticationSession: Equatable, Sendable {
     let accessToken: String
     let refreshToken: String?
 }
 
-struct MFAChallenge: Equatable, Sendable {
+nonisolated struct MFAChallenge: Equatable, Sendable {
     let sessionToken: String
     let methods: [String]
 }
 
-enum AuthenticationError: Error, Equatable, Sendable {
+nonisolated enum AuthenticationError: Error, Equatable, Sendable {
     case invalidInstanceURL
     case invalidCredentials(String?)
     case mfaRequired(MFAChallenge)
@@ -91,11 +91,11 @@ extension AuthenticationError: LocalizedError {
     }
 }
 
-protocol HTTPTransport: Sendable {
+nonisolated protocol HTTPTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse)
 }
 
-struct URLSessionHTTPTransport: HTTPTransport {
+nonisolated struct URLSessionHTTPTransport: HTTPTransport {
     private let session: URLSession
 
     init(session: URLSession = .shared) {
@@ -111,7 +111,7 @@ struct URLSessionHTTPTransport: HTTPTransport {
     }
 }
 
-protocol AuthenticationClient: Sendable {
+nonisolated protocol AuthenticationClient: Sendable {
     func signIn(
         instance: InstanceURL,
         username: String,
@@ -119,14 +119,14 @@ protocol AuthenticationClient: Sendable {
     ) async throws -> AuthenticationSession
 }
 
-protocol SessionRefreshing: Sendable {
+nonisolated protocol SessionRefreshing: Sendable {
     func refresh(
         instance: InstanceURL,
         refreshToken: String
     ) async throws -> AuthenticationSession
 }
 
-struct AllauthClient: AuthenticationClient, SessionRefreshing {
+nonisolated struct AllauthClient: AuthenticationClient, SessionRefreshing {
     private let transport: any HTTPTransport
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -232,12 +232,12 @@ struct AllauthClient: AuthenticationClient, SessionRefreshing {
     }
 }
 
-private struct LoginRequest: Encodable {
+private nonisolated struct LoginRequest: Encodable {
     let username: String
     let password: String
 }
 
-private struct RefreshRequest: Encodable {
+private nonisolated struct RefreshRequest: Encodable {
     let refreshToken: String
 
     enum CodingKeys: String, CodingKey {
@@ -245,7 +245,7 @@ private struct RefreshRequest: Encodable {
     }
 }
 
-private struct RefreshEnvelope: Decodable {
+private nonisolated struct RefreshEnvelope: Decodable {
     struct DataPayload: Decodable {
         let accessToken: String?
         let refreshToken: String?
@@ -268,7 +268,7 @@ private struct RefreshEnvelope: Decodable {
     }
 }
 
-private struct LoginEnvelope: Decodable {
+private nonisolated struct LoginEnvelope: Decodable {
     struct Meta: Decodable {
         let accessToken: String?
         let refreshToken: String?
