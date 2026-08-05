@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+
+# Local Xcode results, archives, and signing material
+*.xcresult
+*.xcarchive
+*.mobileprovision
+*.cer
+*.p8
+*.p12
+*.pem
+
+# Build output
+DerivedData/
+build/
+.build/
+
+# App artifacts
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Local environment
+/.local/
+.env
+.env.*
+!.env.example
+
+buildServer.json
