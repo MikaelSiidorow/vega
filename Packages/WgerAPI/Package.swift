@@ -52,6 +52,20 @@ let package = Package(
                     package: "swift-openapi-generator"
                 )
             ]
-        )
+        ),
+        .testTarget(
+            name: "WgerAPITests",
+            dependencies: [
+                "WgerAPI",
+                .product(
+                    name: "OpenAPIRuntime",
+                    package: "swift-openapi-runtime"
+                ),
+                .product(
+                    name: "HTTPTypes",
+                    package: "swift-http-types"
+                ),
+            ]
+        ),
     ]
 )
