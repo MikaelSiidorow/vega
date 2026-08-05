@@ -2,8 +2,7 @@
 
 Vega is an iOS app built with SwiftUI.
 
-The current product and implementation plan is in
-[docs/project-plan.md](docs/project-plan.md).
+See the short [roadmap](docs/roadmap.md) for current and planned work.
 
 ## Development
 
