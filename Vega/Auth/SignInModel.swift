@@ -39,22 +39,19 @@ final class SignInModel {
     private(set) var errorMessage: String?
 
     private let authenticationClient: any AuthenticationClient
-    private let sessionRefresher: any SessionRefreshing
     private let connectionChecker: any ConnectionChecking
-    private let credentialStore: any SessionCredentialStoring
+    private let sessionCoordinator: any SessionCoordinating
     private var session: AuthenticationSession?
     private var hasAttemptedRestore = false
 
     init(
         authenticationClient: any AuthenticationClient = AllauthClient(),
-        sessionRefresher: any SessionRefreshing = AllauthClient(),
         connectionChecker: any ConnectionChecking = WgerConnectionChecker(),
-        credentialStore: any SessionCredentialStoring = KeychainSessionCredentialStore()
+        sessionCoordinator: any SessionCoordinating = SessionCoordinator()
     ) {
         self.authenticationClient = authenticationClient
-        self.sessionRefresher = sessionRefresher
         self.connectionChecker = connectionChecker
-        self.credentialStore = credentialStore
+        self.sessionCoordinator = sessionCoordinator
     }
 
     var canSignIn: Bool {
@@ -83,15 +80,7 @@ final class SignInModel {
                 instance: instance,
                 session: session
             )
-            guard let refreshToken = session.refreshToken else {
-                throw AuthenticationError.malformedResponse
-            }
-            try await credentialStore.save(
-                StoredSession(
-                    instanceAddress: instance.url.absoluteString,
-                    refreshToken: refreshToken
-                )
-            )
+            try await sessionCoordinator.establish(instance: instance, credentials: session)
 
             self.session = session
             connectedAccount = ConnectedAccount(
@@ -117,21 +106,9 @@ final class SignInModel {
         defer { isRestoringSession = false }
 
         do {
-            guard let storedSession = try await credentialStore.load() else { return }
-            let instance = try InstanceURL(storedSession.instanceAddress)
-            let refreshedSession = try await sessionRefresher.refresh(
-                instance: instance,
-                refreshToken: storedSession.refreshToken
-            )
-            guard let rotatedRefreshToken = refreshedSession.refreshToken else {
-                throw AuthenticationError.malformedResponse
-            }
-            try await credentialStore.save(
-                StoredSession(
-                    instanceAddress: instance.url.absoluteString,
-                    refreshToken: rotatedRefreshToken
-                )
-            )
+            guard let activeSession = try await sessionCoordinator.restore() else { return }
+            let instance = activeSession.instance
+            let refreshedSession = activeSession.credentials
             let planCount = try await connectionChecker.nutritionPlanCount(
                 instance: instance,
                 session: refreshedSession
@@ -144,12 +121,10 @@ final class SignInModel {
             )
             instanceAddress = instance.url.absoluteString
         } catch AuthenticationError.expiredSession {
-            try? await credentialStore.clear()
             session = nil
             connectedAccount = nil
             errorMessage = AuthenticationError.expiredSession.errorDescription
         } catch AuthenticationError.invalidInstanceURL {
-            try? await credentialStore.clear()
             session = nil
             connectedAccount = nil
             errorMessage = AuthenticationError.invalidInstanceURL.errorDescription
@@ -168,7 +143,7 @@ final class SignInModel {
         password = ""
         errorMessage = nil
         do {
-            try await credentialStore.clear()
+            try await sessionCoordinator.clear()
         } catch {
             errorMessage =
                 (error as? LocalizedError)?.errorDescription

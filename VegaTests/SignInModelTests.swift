@@ -20,9 +20,11 @@ struct SignInModelTests {
                     AuthenticationSession(accessToken: "access", refreshToken: "refresh")
                 )
             ),
-            sessionRefresher: StubSessionRefresher(result: .failure(.expiredSession)),
             connectionChecker: StubConnectionChecker(result: .success(2)),
-            credentialStore: credentialStore
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(result: .failure(.expiredSession)),
+                credentialStore: credentialStore
+            )
         )
         model.instanceAddress = "wger.example"
         model.username = "test-user"
@@ -56,16 +58,18 @@ struct SignInModelTests {
         )
         let model = SignInModel(
             authenticationClient: StubAuthenticationClient(result: .failure(.expiredSession)),
-            sessionRefresher: StubSessionRefresher(
-                result: .success(
-                    AuthenticationSession(
-                        accessToken: "new-access",
-                        refreshToken: "new-refresh"
-                    )
-                )
-            ),
             connectionChecker: StubConnectionChecker(result: .success(3)),
-            credentialStore: credentialStore
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(
+                    result: .success(
+                        AuthenticationSession(
+                            accessToken: "new-access",
+                            refreshToken: "new-refresh"
+                        )
+                    )
+                ),
+                credentialStore: credentialStore
+            )
         )
 
         await model.restoreSession()
@@ -92,9 +96,11 @@ struct SignInModelTests {
         )
         let model = SignInModel(
             authenticationClient: StubAuthenticationClient(result: .failure(.expiredSession)),
-            sessionRefresher: StubSessionRefresher(result: .failure(.expiredSession)),
             connectionChecker: StubConnectionChecker(result: .success(0)),
-            credentialStore: credentialStore
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(result: .failure(.expiredSession)),
+                credentialStore: credentialStore
+            )
         )
 
         await model.restoreSession()
@@ -113,9 +119,11 @@ struct SignInModelTests {
         let credentialStore = InMemorySessionCredentialStore(session: storedSession)
         let model = SignInModel(
             authenticationClient: StubAuthenticationClient(result: .failure(.expiredSession)),
-            sessionRefresher: StubSessionRefresher(result: .failure(.network)),
             connectionChecker: StubConnectionChecker(result: .success(0)),
-            credentialStore: credentialStore
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(result: .failure(.network)),
+                credentialStore: credentialStore
+            )
         )
 
         await model.restoreSession()
@@ -135,16 +143,18 @@ struct SignInModelTests {
         )
         let model = SignInModel(
             authenticationClient: StubAuthenticationClient(result: .failure(.expiredSession)),
-            sessionRefresher: StubSessionRefresher(
-                result: .success(
-                    AuthenticationSession(
-                        accessToken: "new-access",
-                        refreshToken: "new-refresh"
-                    )
-                )
-            ),
             connectionChecker: StubConnectionChecker(result: .failure(.failed)),
-            credentialStore: credentialStore
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(
+                    result: .success(
+                        AuthenticationSession(
+                            accessToken: "new-access",
+                            refreshToken: "new-refresh"
+                        )
+                    )
+                ),
+                credentialStore: credentialStore
+            )
         )
 
         await model.restoreSession()
