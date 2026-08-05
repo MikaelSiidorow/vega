@@ -2,12 +2,31 @@ import Foundation
 import SwiftUI
 
 struct ContentView: View {
-    @State private var model = SignInModel()
+    @State private var model: SignInModel
+    @State private var diaryModel: DiaryScreenModel
+
+    init() {
+        let sessionCoordinator = SessionCoordinator()
+        let authenticatedClient = AuthenticatedAPIClient(sessionCoordinator: sessionCoordinator)
+        _model = State(
+            initialValue: SignInModel(sessionCoordinator: sessionCoordinator)
+        )
+        _diaryModel = State(
+            initialValue: DiaryScreenModel(
+                diaryFetcher: DailyDiaryAPI(client: authenticatedClient)
+            )
+        )
+    }
 
     var body: some View {
         NavigationStack {
             if let account = model.connectedAccount {
-                connectedView(account)
+                DailyDiaryView(
+                    model: diaryModel,
+                    instanceName: account.instance.url.host()
+                        ?? account.instance.url.absoluteString,
+                    signOut: signOut
+                )
             } else if model.isRestoringSession {
                 ProgressView("Restoring session…")
             } else {
@@ -67,28 +86,12 @@ struct ContentView: View {
         .navigationTitle("Vega")
     }
 
-    private func connectedView(_ account: ConnectedAccount) -> some View {
-        ContentUnavailableView {
-            Label("Connected", systemImage: "checkmark.circle.fill")
-        } description: {
-            VStack(spacing: 8) {
-                Text(account.instance.url.host() ?? account.instance.url.absoluteString)
-                Text(planSummary(account.nutritionPlanCount))
-            }
-        } actions: {
-            Button("Sign out", role: .destructive) {
-                Task { await model.signOut() }
-            }
-        }
-        .navigationTitle("Vega")
-    }
-
-    private func planSummary(_ count: Int) -> String {
-        count == 1 ? "1 nutrition plan found" : "\(count) nutrition plans found"
-    }
-
     private func startSignIn() {
         Task { await model.signIn() }
+    }
+
+    private func signOut() {
+        Task { await model.signOut() }
     }
 }
 
