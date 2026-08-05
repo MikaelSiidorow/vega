@@ -1,24 +1,24 @@
-name: Check
+name: UI Tests
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  pull_request:
+    types:
+      - labeled
 
 concurrency:
-  group: check-${{ github.ref }}
+  group: ui-tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  check:
-    name: Format, build, and test
+  ui-tests:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-ui-tests'
+    name: UI test and screenshots
     runs-on: macos-26-intel
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       IOS_SIMULATOR_DESTINATION: platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5
@@ -36,7 +36,7 @@ jobs:
             ${{ runner.temp }}/SourcePackages
             ~/Library/Caches/org.swift.swiftpm
           key: >-
-            vega-macos-26-intel-xcode-26.6-${{
+            vega-ui-macos-26-intel-xcode-26.6-${{
             hashFiles(
               'Vega.xcodeproj/project.pbxproj',
               'Vega.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved',
@@ -49,20 +49,31 @@ jobs:
       - name: Check toolchain
         run: xcodebuild -version
 
-      - name: Run checks
-        run: make check
+      - name: Run UI test
+        run: make test-ui
         env:
-          XCODE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/Vega.xcresult
+          XCODE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/Vega-UI.xcresult
           XCODEBUILD_FLAGS: >-
             -skipPackagePluginValidation
             -derivedDataPath "${{ runner.temp }}/DerivedData"
             -clonedSourcePackagesDirPath "${{ runner.temp }}/SourcePackages"
 
-      - name: Upload unit test results
+      - name: Export screenshot attachments
+        if: always()
+        run: |
+          if [[ -d "${{ runner.temp }}/Vega-UI.xcresult" ]]; then
+            xcrun xcresulttool export attachments \
+              --path "${{ runner.temp }}/Vega-UI.xcresult" \
+              --output-path "${{ runner.temp }}/Vega-UI-attachments"
+          fi
+
+      - name: Upload UI test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Vega-unit-test-results-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/Vega.xcresult
+          name: Vega-UI-test-results-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/Vega-UI.xcresult
+            ${{ runner.temp }}/Vega-UI-attachments
           if-no-files-found: warn
           retention-days: 7
