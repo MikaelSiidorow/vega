@@ -10,11 +10,11 @@
 
       swift = pkgs.stdenvNoCC.mkDerivation {
         pname = "swift";
-        version = "6.1.3";
+        version = "6.2.4";
 
         src = pkgs.fetchurl {
-          url = "https://download.swift.org/swift-6.1.3-release/ubuntu2204/swift-6.1.3-RELEASE/swift-6.1.3-RELEASE-ubuntu22.04.tar.gz";
-          hash = "sha256-KOSySt+bG3grdZGdnyoLCtfhboQ6qiA+C6yngCSNzdY=";
+          url = "https://download.swift.org/swift-6.2.4-release/ubuntu2204/swift-6.2.4-RELEASE/swift-6.2.4-RELEASE-ubuntu22.04.tar.gz";
+          hash = "sha256-qqoy8GCDj1xbR2r6rcuLSRcOjVskr+nLnfLozjPUp3g=";
         };
 
         # This is Swift's official Ubuntu 22.04 toolchain. Keep its binaries
