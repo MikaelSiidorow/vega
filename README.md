@@ -48,6 +48,10 @@ make check
 The test destination defaults to the latest iPhone 17 Pro simulator. Override
 `IOS_SIMULATOR_DESTINATION` when using a different installed simulator.
 
+GitHub Actions runs the same `make check` command on macOS 26 with Xcode 26.6.
+Swift package checkouts and compatible Xcode build products are cached using the
+workspace lockfile and build configuration as the cache key.
+
 Refresh the complete Xcode build metadata used by SourceKit-LSP:
 
 ```sh

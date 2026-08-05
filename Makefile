@@ -2,6 +2,7 @@
 
 WGER_SCHEMA_URL ?=
 IOS_SIMULATOR_DESTINATION ?= platform=iOS Simulator,name=iPhone 17 Pro,OS=latest
+XCODEBUILD_FLAGS ?=
 SWIFT_FORMAT_PATHS := Vega VegaTests VegaUITests \
 	Packages/WgerAPI/Package.swift Packages/WgerAPI/Sources/WgerAPI
 
@@ -20,15 +21,17 @@ test:
 	trap 'rm -rf "$$temporary_directory"' 0 1 2 15; \
 	xcodebuild \
 		-quiet \
+		$(XCODEBUILD_FLAGS) \
 		-project Vega.xcodeproj \
 		-scheme Vega \
 		-destination '$(IOS_SIMULATOR_DESTINATION)' \
 		-resultBundlePath "$$temporary_directory/Vega.xcresult" \
-		clean test
+		test
 
 build-wger-api:
 	xcodebuild \
 		-quiet \
+		$(XCODEBUILD_FLAGS) \
 		-project Vega.xcodeproj \
 		-scheme WgerAPI \
 		-destination 'generic/platform=iOS Simulator' \
@@ -60,6 +63,7 @@ build-for-testing:
 	trap 'rm -rf "$$temporary_directory"' 0 1 2 15; \
 	xcodebuild \
 		-quiet \
+		$(XCODEBUILD_FLAGS) \
 		-project Vega.xcodeproj \
 		-scheme Vega \
 		-destination 'generic/platform=iOS Simulator' \

@@ -1,0 +1,56 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Format, build, and test
+    runs-on: macos-26-intel
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Cache Swift packages and build products
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ runner.temp }}/DerivedData/Build
+            ${{ runner.temp }}/DerivedData/ModuleCache.noindex
+            ${{ runner.temp }}/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: >-
+            vega-macos-26-intel-xcode-26.6-${{
+            hashFiles(
+              'Vega.xcodeproj/project.pbxproj',
+              'Vega.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved',
+              'Packages/WgerAPI/Package.swift',
+              'Packages/WgerAPI/Sources/WgerAPI/openapi-generator-config.yaml',
+              'Packages/WgerAPI/Sources/WgerAPI/openapi.json'
+            )
+            }}
+
+      - name: Check toolchain
+        run: xcodebuild -version
+
+      - name: Run checks
+        run: make check
+        env:
+          XCODEBUILD_FLAGS: >-
+            -derivedDataPath "${{ runner.temp }}/DerivedData"
+            -clonedSourcePackagesDirPath "${{ runner.temp }}/SourcePackages"
