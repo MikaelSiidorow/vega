@@ -32,4 +32,22 @@ final class VegaUITests: XCTestCase {
         add(screenshot)
     }
 
+    @MainActor
+    func testShowsPopulatedDailyDiary() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        let elements = app.descendants(matching: .any)
+        XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
+        XCTAssertTrue(elements["diary-item-oats"].exists)
+        XCTAssertTrue(elements["diary-item-blueberries"].exists)
+        XCTAssertTrue(elements["diary-item-tofu"].exists)
+
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Populated daily diary"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
 }
