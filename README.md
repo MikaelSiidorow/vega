@@ -1,8 +1,27 @@
 # Vega
 
-Vega is an iOS app built with SwiftUI.
+Vega is an independent, native SwiftUI client for self-hosted
+[wger](https://wger.de) fitness and nutrition servers. It focuses on making
+frequent nutrition-tracking tasks feel fast and at home on iOS.
+
+Vega is an early-stage, unofficial project. It is not affiliated with or
+endorsed by the wger project.
 
 See the short [roadmap](docs/roadmap.md) for current and planned work.
+
+## Relationship to wger
+
+Vega is independently implemented against wger's documented HTTP API; it is
+not a fork or port of either the
+[wger server](https://github.com/wger-project/wger) or its
+[official Flutter client](https://github.com/wger-project/flutter). Both projects
+informed Vega's API integration and product direction, and both are licensed
+under the GNU Affero General Public License.
+
+The checked-in OpenAPI snapshots originate from a wger 2.6 server and are
+mechanically normalized for Apple's Swift OpenAPI Generator. Vega does not
+bundle wger's exercise, ingredient, or image catalogs. See [NOTICE.md](NOTICE.md)
+for provenance and third-party licensing details.
 
 ## Setup from a fresh clone
 
@@ -13,7 +32,7 @@ default test destination is an iPhone 17 Pro simulator. Xcode supplies Swift,
 Clone the repository and confirm that the intended Xcode is active:
 
 ```sh
-git clone git@github.com:MikaelSiidorow/vega.git
+git clone https://github.com/MikaelSiidorow/vega.git
 cd vega
 xcodebuild -version
 ```
@@ -62,10 +81,11 @@ Build the API package with:
 make build-wger-api
 ```
 
-Refresh the snapshot from the target server, then rebuild it, with:
+Refresh the snapshot intentionally from a compatible wger 2.6 server, then
+rebuild it, with:
 
 ```sh
-make refresh-wger-schema
+WGER_SCHEMA_URL=https://your-wger.example/api/v2/schema make refresh-wger-schema
 make build-wger-api
 ```
 
@@ -95,12 +115,22 @@ make check
 The test destination defaults to the latest iPhone 17 Pro simulator. Override
 `IOS_SIMULATOR_DESTINATION` when using a different installed simulator.
 
-GitHub Actions runs the same `make check` command on macOS 26 with Xcode 26.6.
+GitHub Actions runs the same `make check` command on the standard Intel macOS 26
+runner with Xcode 26.6.
 Swift package checkouts and compatible Xcode build products are cached using the
-workspace lockfile and build configuration as the cache key.
+workspace lockfile and build configuration as the cache key. Each run keeps its
+Xcode result bundle and exported UI-test screenshots as an artifact for seven
+days.
 
 Refresh the complete Xcode build metadata used by SourceKit-LSP:
 
 ```sh
 make build-for-testing
 ```
+
+## License
+
+Vega is licensed under the
+[GNU Affero General Public License, version 3 or later](LICENSE), with an
+[additional permission for app-store distribution](NOTICE.md#app-store-exception).
+The corresponding source remains available through this repository.

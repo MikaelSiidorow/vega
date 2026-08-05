@@ -51,7 +51,28 @@ jobs:
       - name: Run checks
         run: make check
         env:
+          XCODE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/Vega.xcresult
           XCODEBUILD_FLAGS: >-
             -skipPackagePluginValidation
             -derivedDataPath "${{ runner.temp }}/DerivedData"
             -clonedSourcePackagesDirPath "${{ runner.temp }}/SourcePackages"
+
+      - name: Export screenshot attachments
+        if: always()
+        run: |
+          if [[ -d "${{ runner.temp }}/Vega.xcresult" ]]; then
+            xcrun xcresulttool export attachments \
+              --path "${{ runner.temp }}/Vega.xcresult" \
+              --output-path "${{ runner.temp }}/Vega-test-attachments"
+          fi
+
+      - name: Upload Xcode test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vega-test-results-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/Vega.xcresult
+            ${{ runner.temp }}/Vega-test-attachments
+          if-no-files-found: warn
+          retention-days: 7

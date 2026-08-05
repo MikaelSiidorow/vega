@@ -34,6 +34,7 @@
     {
       devShells.${system}.default = pkgs.mkShellNoCC {
         packages = with pkgs; [
+          actionlint
           curl
           jq
           swift
