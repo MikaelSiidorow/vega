@@ -16,14 +16,14 @@ final class VegaUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testShowsSignInForm() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        XCTAssertTrue(app.textFields["Instance URL"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["Username or email"].exists)
+        XCTAssertTrue(app.secureTextFields["Password"].exists)
+        XCTAssertTrue(app.buttons["Sign in"].exists)
     }
 
 }
