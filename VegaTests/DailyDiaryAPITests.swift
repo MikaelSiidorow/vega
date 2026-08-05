@@ -118,7 +118,8 @@ nonisolated struct DailyDiaryAPITests {
             energy: 100,
             protein: "10",
             carbohydrates: "20",
-            fat: "5"
+            fat: "5",
+            weightUnits: []
         )
     }
 }

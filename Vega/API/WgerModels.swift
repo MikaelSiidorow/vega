@@ -27,6 +27,13 @@ nonisolated struct WgerIngredient: Equatable, Sendable {
     let protein: String
     let carbohydrates: String
     let fat: String
+    let weightUnits: [WgerIngredientWeightUnit]
+}
+
+nonisolated struct WgerIngredientWeightUnit: Equatable, Sendable {
+    let id: Int
+    let grams: Int
+    let name: String
 }
 
 nonisolated struct WgerPage<Value: Sendable>: Sendable {
@@ -70,7 +77,10 @@ extension Components.Schemas.IngredientInfo {
             energy: energy,
             protein: protein,
             carbohydrates: carbohydrates,
-            fat: fat
+            fat: fat,
+            weightUnits: weightUnits.map {
+                WgerIngredientWeightUnit(id: $0.id, grams: $0.gram, name: $0.name)
+            }
         )
     }
 }
