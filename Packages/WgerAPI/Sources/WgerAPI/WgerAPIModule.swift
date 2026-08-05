@@ -32,6 +32,90 @@ public enum WgerAPIModule {
             throw WgerAPIError.unexpectedStatus(statusCode)
         }
     }
+
+    /// Returns one page of the user's nutrition plans.
+    public static func nutritionPlans(
+        serverURL: URL,
+        accessToken: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedNutritionPlanList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.nutritionplanList(
+            query: .init(limit: limit, offset: offset)
+        )
+        return try response.value()
+    }
+
+    /// Returns one page of diary entries in a half-open time range.
+    public static func nutritionDiary(
+        serverURL: URL,
+        accessToken: String,
+        planID: String,
+        from start: Date,
+        to end: Date,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedLogItemList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.nutritiondiaryList(
+            query: .init(
+                datetimeGte: start,
+                datetimeLt: end,
+                limit: limit,
+                offset: offset,
+                ordering: "datetime",
+                plan: planID
+            )
+        )
+        return try response.value()
+    }
+
+    /// Returns ingredient details for the requested numeric IDs.
+    public static func ingredientInfo(
+        serverURL: URL,
+        accessToken: String,
+        ids: [Int]
+    ) async throws -> Components.Schemas.PaginatedIngredientInfoList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.ingredientinfoList(
+            query: .init(idIn: ids, limit: ids.count)
+        )
+        return try response.value()
+    }
+}
+
+extension Operations.NutritionplanList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedNutritionPlanList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.NutritiondiaryList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedLogItemList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.IngredientinfoList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedIngredientInfoList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
 }
 
 /// Injects a bearer token into requests made by the generated wger client.
