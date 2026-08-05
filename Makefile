@@ -1,15 +1,16 @@
-.PHONY: check format lint test build-for-testing build-wger-api refresh-wger-schema
+.PHONY: check format lint test test-unit test-ui build-for-testing build-wger-api refresh-wger-schema
 
 WGER_SCHEMA_URL ?=
 IOS_SIMULATOR_DESTINATION ?= platform=iOS Simulator,name=iPhone 17 Pro,OS=latest
 XCODEBUILD_FLAGS ?=
 XCODE_RESULT_BUNDLE_PATH ?=
+XCODEBUILD_TEST_SELECTION ?=
 SWIFT_FORMAT_PATHS := Vega VegaTests VegaUITests \
 	Packages/WgerAPI/Package.swift Packages/WgerAPI/Sources/WgerAPI
 
 check:
 	$(MAKE) lint
-	$(MAKE) test
+	$(MAKE) test-unit
 
 format:
 	xcrun swift-format format --in-place --recursive $(SWIFT_FORMAT_PATHS)
@@ -27,11 +28,18 @@ test:
 	xcodebuild \
 		-quiet \
 		$(XCODEBUILD_FLAGS) \
+		$(XCODEBUILD_TEST_SELECTION) \
 		-project Vega.xcodeproj \
 		-scheme Vega \
 		-destination '$(IOS_SIMULATOR_DESTINATION)' \
 		-resultBundlePath "$$result_bundle_path" \
 		test
+
+test-unit: XCODEBUILD_TEST_SELECTION := -only-testing:VegaTests -parallel-testing-enabled NO
+test-unit: test
+
+test-ui: XCODEBUILD_TEST_SELECTION := -only-testing:VegaUITests/VegaUITests/testShowsSignInForm -parallel-testing-enabled NO
+test-ui: test
 
 build-wger-api:
 	xcodebuild \
