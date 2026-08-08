@@ -1,6 +1,13 @@
 import Foundation
 
+nonisolated enum DiaryFixtureMode: Equatable, Sendable {
+    case basicLogging
+    case plannedMeals
+}
+
 nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
+    let mode: DiaryFixtureMode
+
     func diary(for date: Date, calendar: Calendar) -> DailyDiaryPayload {
         DailyDiaryPayload(
             plan: WgerNutritionPlan(
@@ -10,27 +17,7 @@ nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
                 end: nil,
                 description: "Balanced nutrition"
             ),
-            entries: [
-                entry(
-                    id: "oats",
-                    mealID: "breakfast",
-                    ingredientID: 1,
-                    amount: "80"
-                ),
-                entry(
-                    id: "blueberries",
-                    mealID: "breakfast",
-                    ingredientID: 2,
-                    amount: "120"
-                ),
-                entry(
-                    id: "tofu",
-                    mealID: "dinner",
-                    ingredientID: 3,
-                    amount: "2",
-                    weightUnitID: 31
-                ),
-            ],
+            entries: entries(for: date, calendar: calendar),
             ingredients: [
                 1: ingredient(
                     id: 1,
@@ -66,12 +53,41 @@ nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
         )
     }
 
+    private func entries(for date: Date, calendar: Calendar) -> [WgerNutritionDiaryEntry] {
+        let usesMeals = mode == .plannedMeals
+        return [
+            entry(
+                id: "oats",
+                mealID: usesMeals ? "breakfast" : nil,
+                ingredientID: 1,
+                amount: "80",
+                date: timestamp(atHour: 8, minute: 5, on: date, calendar: calendar)
+            ),
+            entry(
+                id: "blueberries",
+                mealID: usesMeals ? "breakfast" : nil,
+                ingredientID: 2,
+                amount: "120",
+                date: timestamp(atHour: 8, minute: 20, on: date, calendar: calendar)
+            ),
+            entry(
+                id: "tofu",
+                mealID: usesMeals ? "dinner" : nil,
+                ingredientID: 3,
+                amount: "2",
+                weightUnitID: 31,
+                date: timestamp(atHour: 12, minute: 30, on: date, calendar: calendar)
+            ),
+        ]
+    }
+
     private func entry(
         id: String,
-        mealID: String,
+        mealID: String?,
         ingredientID: Int,
         amount: String,
-        weightUnitID: Int? = nil
+        weightUnitID: Int? = nil,
+        date: Date
     ) -> WgerNutritionDiaryEntry {
         WgerNutritionDiaryEntry(
             id: id,
@@ -79,9 +95,18 @@ nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
             mealID: mealID,
             ingredientID: ingredientID,
             weightUnitID: weightUnitID,
-            date: nil,
+            date: date,
             amount: amount
         )
+    }
+
+    private func timestamp(
+        atHour hour: Int,
+        minute: Int,
+        on date: Date,
+        calendar: Calendar
+    ) -> Date {
+        calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
     }
 
     private func ingredient(

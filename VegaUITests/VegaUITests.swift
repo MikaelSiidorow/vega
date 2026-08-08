@@ -33,21 +33,40 @@ final class VegaUITests: XCTestCase {
     }
 
     @MainActor
-    func testShowsPopulatedDailyDiary() throws {
+    func testShowsBasicLoggingDiary() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-uiTestDiaryFixture", "-AppleLocale", "en_US"]
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
         app.launch()
 
+        assertPopulatedDiary(in: app)
+
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Basic logging diary"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    @MainActor
+    func testShowsPlannedMealsDiary() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestPlannedDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        assertPopulatedDiary(in: app)
+
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Planned meals diary"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    @MainActor
+    private func assertPopulatedDiary(in app: XCUIApplication) {
         let elements = app.descendants(matching: .any)
         XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
         XCTAssertTrue(elements["diary-item-oats"].exists)
         XCTAssertTrue(elements["diary-item-blueberries"].exists)
         XCTAssertTrue(elements["diary-item-tofu"].exists)
-
-        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        screenshot.name = "Populated daily diary"
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
     }
 
 }

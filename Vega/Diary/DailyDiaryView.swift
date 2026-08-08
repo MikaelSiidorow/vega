@@ -83,7 +83,7 @@ struct DailyDiaryView: View {
 
     @ViewBuilder
     private func diaryContent(_ diary: DailyDiary) -> some View {
-        if diary.meals.isEmpty {
+        if diary.sections.isEmpty {
             ContentUnavailableView(
                 "Nothing logged",
                 systemImage: "fork.knife",
@@ -97,9 +97,9 @@ struct DailyDiaryView: View {
                         .listRowBackground(Color.clear)
                 }
 
-                ForEach(Array(diary.meals.enumerated()), id: \.element.id) { index, meal in
-                    Section(mealTitle(meal, index: index)) {
-                        ForEach(meal.items) { item in
+                ForEach(Array(diary.sections.enumerated()), id: \.element.id) { index, section in
+                    Section(sectionTitle(section, index: index, sections: diary.sections)) {
+                        ForEach(section.items) { item in
                             DiaryItemRow(item: item)
                         }
                     }
@@ -112,12 +112,26 @@ struct DailyDiaryView: View {
         }
     }
 
-    private func mealTitle(_ meal: DiaryMeal, index: Int) -> String {
-        switch meal.id {
+    private func sectionTitle(
+        _ section: DiarySection,
+        index: Int,
+        sections: [DiarySection]
+    ) -> String {
+        switch section.id {
         case .meal:
-            return "Meal \(index + 1)"
-        case .unassigned:
-            return "Other"
+            let number = sections.prefix(index + 1).reduce(0) { count, section in
+                if case .meal = section.id { return count + 1 }
+                return count
+            }
+            return "Meal \(number)"
+        case .timeGroup:
+            let dates = section.items.compactMap(\.date)
+            guard let first = dates.first, let last = dates.last else { return "Unscheduled" }
+            let firstTime = first.formatted(date: .omitted, time: .shortened)
+            guard first != last else { return firstTime }
+            return "\(firstTime)–\(last.formatted(date: .omitted, time: .shortened))"
+        case .unscheduled:
+            return "Unscheduled"
         }
     }
 }

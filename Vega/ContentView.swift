@@ -7,27 +7,41 @@ struct ContentView: View {
     private let showsDiaryFixture: Bool
 
     init() {
-        let showsDiaryFixture = ProcessInfo.processInfo.arguments.contains("-uiTestDiaryFixture")
+        let arguments = ProcessInfo.processInfo.arguments
+        let fixtureMode: DiaryFixtureMode?
+        if arguments.contains("-uiTestBasicDiaryFixture") {
+            fixtureMode = .basicLogging
+        } else if arguments.contains("-uiTestPlannedDiaryFixture")
+            || arguments.contains("-uiTestDiaryFixture")
+        {
+            fixtureMode = .plannedMeals
+        } else {
+            fixtureMode = nil
+        }
         let sessionCoordinator = SessionCoordinator()
         let authenticatedClient = AuthenticatedAPIClient(sessionCoordinator: sessionCoordinator)
         var fixtureCalendar = Calendar(identifier: .gregorian)
         fixtureCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
-        self.showsDiaryFixture = showsDiaryFixture
+        showsDiaryFixture = fixtureMode != nil
         _model = State(
             initialValue: SignInModel(sessionCoordinator: sessionCoordinator)
         )
-        _diaryModel = State(
-            initialValue: showsDiaryFixture
-                ? DiaryScreenModel(
+        if let fixtureMode {
+            _diaryModel = State(
+                initialValue: DiaryScreenModel(
                     selectedDate: Date(timeIntervalSince1970: 1_785_888_000),
                     calendar: fixtureCalendar,
-                    diaryFetcher: FixtureDailyDiaryFetcher()
+                    diaryFetcher: FixtureDailyDiaryFetcher(mode: fixtureMode)
                 )
-                : DiaryScreenModel(
+            )
+        } else {
+            _diaryModel = State(
+                initialValue: DiaryScreenModel(
                     diaryFetcher: DailyDiaryAPI(client: authenticatedClient)
                 )
-        )
+            )
+        }
     }
 
     var body: some View {
