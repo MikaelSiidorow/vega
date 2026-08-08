@@ -5,8 +5,21 @@ nonisolated struct DailyDiaryPayload: Equatable, Sendable {
     let plan: WgerNutritionPlan?
     let entries: [WgerNutritionDiaryEntry]
     let ingredients: [Int: WgerIngredient]
+    let meals: [WgerMeal]
 
-    static let empty = DailyDiaryPayload(plan: nil, entries: [], ingredients: [:])
+    init(
+        plan: WgerNutritionPlan?,
+        entries: [WgerNutritionDiaryEntry],
+        ingredients: [Int: WgerIngredient],
+        meals: [WgerMeal] = []
+    ) {
+        self.plan = plan
+        self.entries = entries
+        self.ingredients = ingredients
+        self.meals = meals
+    }
+
+    static let empty = DailyDiaryPayload(plan: nil, entries: [], ingredients: [:], meals: [])
 }
 
 nonisolated protocol DailyDiaryFetching: Sendable {
@@ -17,11 +30,13 @@ nonisolated protocol DiaryEntryDeleting: Sendable {
     func deleteDiaryEntry(id: String) async throws
 }
 
-nonisolated protocol DiaryEntryAmountUpdating: Sendable {
-    func updateDiaryEntryAmount(
+nonisolated protocol DiaryEntryUpdating: Sendable {
+    func updateDiaryEntry(
         id: String,
         amount: String,
-        weightUnitID: Int?
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
     ) async throws
 }
 
@@ -49,18 +64,28 @@ nonisolated protocol DailyDiaryTransport: Sendable {
         ids: [Int]
     ) async throws -> [WgerIngredient]
 
+    func meals(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> WgerPage<WgerMeal>
+
     func deleteEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
         id: String
     ) async throws
 
-    func updateEntryAmount(
+    func updateEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
         id: String,
         amount: String,
-        weightUnitID: Int?
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
     ) async throws
 }
 
@@ -120,6 +145,26 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
         return page.results.map(\.vegaValue)
     }
 
+    func meals(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> WgerPage<WgerMeal> {
+        let page = try await WgerAPIModule.meals(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            planID: planID,
+            limit: limit,
+            offset: offset
+        )
+        return WgerPage(
+            values: page.results.compactMap(\.vegaValue),
+            hasNextPage: page.next != nil
+        )
+    }
+
     func deleteEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
@@ -132,23 +177,30 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
         )
     }
 
-    func updateEntryAmount(
+    func updateEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
         id: String,
         amount: String,
-        weightUnitID: Int?
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
     ) async throws {
-        try await WgerAPIModule.updateNutritionDiaryAmount(
+        try await WgerAPIModule.updateNutritionDiaryEntry(
             serverURL: instance.url,
             accessToken: session.accessToken,
             id: id,
-            patch: NutritionDiaryAmountPatch(amount: amount, weightUnit: weightUnitID)
+            patch: NutritionDiaryEntryPatch(
+                amount: amount,
+                weightUnit: weightUnitID,
+                datetime: date,
+                meal: mealID
+            )
         )
     }
 }
 
-actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpdating {
+actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating {
     private static let pageSize = 100
     private let client: any AuthenticatedRequestExecuting
     private let transport: any DailyDiaryTransport
@@ -185,6 +237,12 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpd
                 planID: plan.id,
                 interval: interval
             )
+            let meals = try await Self.allMeals(
+                transport: transport,
+                instance: instance,
+                session: session,
+                planID: plan.id
+            )
             let missingIDs = Set(entries.map(\.ingredientID)).subtracting(cachedIngredients.keys)
             var ingredients = cachedIngredients
             for batch in missingIDs.sorted().chunks(ofCount: Self.pageSize) {
@@ -197,7 +255,12 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpd
                     ingredients[ingredient.id] = ingredient
                 }
             }
-            return DailyDiaryPayload(plan: plan, entries: entries, ingredients: ingredients)
+            return DailyDiaryPayload(
+                plan: plan,
+                entries: entries,
+                ingredients: ingredients,
+                meals: meals
+            )
         }
         ingredientCache.merge(result.ingredients) { _, latest in latest }
         return result
@@ -210,19 +273,23 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpd
         }
     }
 
-    func updateDiaryEntryAmount(
+    func updateDiaryEntry(
         id: String,
         amount: String,
-        weightUnitID: Int?
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
     ) async throws {
         let transport = transport
         try await client.perform { instance, session in
-            try await transport.updateEntryAmount(
+            try await transport.updateEntry(
                 instance: instance,
                 session: session,
                 id: id,
                 amount: amount,
-                weightUnitID: weightUnitID
+                weightUnitID: weightUnitID,
+                date: date,
+                mealID: mealID
             )
         }
     }
@@ -263,6 +330,28 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpd
                 planID: planID,
                 from: interval.start,
                 to: interval.end,
+                limit: pageSize,
+                offset: offset
+            )
+            result.append(contentsOf: page.values)
+            guard page.hasNextPage, !page.values.isEmpty else { return result }
+            offset += page.values.count
+        }
+    }
+
+    private static func allMeals(
+        transport: any DailyDiaryTransport,
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String
+    ) async throws -> [WgerMeal] {
+        var result: [WgerMeal] = []
+        var offset = 0
+        while true {
+            let page = try await transport.meals(
+                instance: instance,
+                session: session,
+                planID: planID,
                 limit: pageSize,
                 offset: offset
             )

@@ -35,7 +35,7 @@ struct ContentView: View {
                     calendar: fixtureCalendar,
                     diaryFetcher: diaryStore,
                     diaryEntryDeleter: diaryStore,
-                    diaryEntryAmountUpdater: diaryStore
+                    diaryEntryUpdater: diaryStore
                 )
             )
         } else {
@@ -44,7 +44,7 @@ struct ContentView: View {
                 initialValue: DiaryScreenModel(
                     diaryFetcher: diaryAPI,
                     diaryEntryDeleter: diaryAPI,
-                    diaryEntryAmountUpdater: diaryAPI
+                    diaryEntryUpdater: diaryAPI
                 )
             )
         }

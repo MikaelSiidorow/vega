@@ -3,6 +3,7 @@ import Foundation
 nonisolated struct DailyDiary: Equatable, Sendable {
     let date: Date
     let planID: String?
+    let meals: [DiaryMeal]
     let sections: [DiarySection]
     let totals: NutritionTotals
 
@@ -48,6 +49,7 @@ nonisolated struct DailyDiary: Equatable, Sendable {
         return DailyDiary(
             date: date,
             planID: payload.plan?.id,
+            meals: payload.meals.compactMap(DiaryMeal.init).sorted { $0.order < $1.order },
             sections: sections,
             totals: sections.flatMap(\.items).reduce(.zero) { $0 + $1.nutrition }
         )
@@ -82,6 +84,21 @@ nonisolated struct DiarySection: Equatable, Identifiable, Sendable {
     let items: [DiaryItem]
 }
 
+nonisolated struct DiaryMeal: Equatable, Identifiable, Sendable {
+    let id: String
+    let order: Int
+    let time: String?
+    let name: String?
+
+    init?(_ meal: WgerMeal) {
+        guard !meal.id.isEmpty else { return nil }
+        id = meal.id
+        order = meal.order
+        time = meal.time
+        name = meal.name
+    }
+}
+
 nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
     let id: String
     let remoteID: String?
@@ -94,6 +111,7 @@ nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
     let weightUnits: [WgerIngredientWeightUnit]
     let grams: Decimal
     let date: Date?
+    let mealID: String?
     let nutritionPer100Grams: NutritionTotals
     let nutrition: NutritionTotals
 
@@ -131,6 +149,7 @@ nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
             weightUnits: ingredient?.weightUnits ?? [],
             grams: grams,
             date: entry.date,
+            mealID: entry.mealID,
             nutritionPer100Grams: nutritionPer100Grams,
             nutrition: nutrition
         )

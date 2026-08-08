@@ -75,6 +75,21 @@ public enum WgerAPIModule {
         return try response.value()
     }
 
+    /// Returns one page of meals belonging to a nutrition plan.
+    public static func meals(
+        serverURL: URL,
+        accessToken: String,
+        planID: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedMealList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.mealList(
+            query: .init(limit: limit, offset: offset, ordering: "order", plan: planID)
+        )
+        return try response.value()
+    }
+
     /// Returns ingredient details for the requested numeric IDs.
     public static func ingredientInfo(
         serverURL: URL,
@@ -105,12 +120,12 @@ public enum WgerAPIModule {
         }
     }
 
-    /// Updates the compound amount and weight unit of one diary entry.
-    public static func updateNutritionDiaryAmount(
+    /// Updates the editable fields of one nutrition diary entry.
+    public static func updateNutritionDiaryEntry(
         serverURL: URL,
         accessToken: String,
         id: String,
-        patch: NutritionDiaryAmountPatch
+        patch: NutritionDiaryEntryPatch
     ) async throws {
         try await patchNutritionDiaryEntry(
             serverURL: serverURL,
@@ -136,7 +151,9 @@ public enum WgerAPIModule {
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(body)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        request.httpBody = try encoder.encode(body)
 
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let response = response as? HTTPURLResponse else {
@@ -148,18 +165,24 @@ public enum WgerAPIModule {
     }
 }
 
-public struct NutritionDiaryAmountPatch: Encodable, Equatable, Sendable {
+public struct NutritionDiaryEntryPatch: Encodable, Equatable, Sendable {
     public let amount: String
     public let weightUnit: Int?
+    public let datetime: Date
+    public let meal: String?
 
-    public init(amount: String, weightUnit: Int?) {
+    public init(amount: String, weightUnit: Int?, datetime: Date, meal: String?) {
         self.amount = amount
         self.weightUnit = weightUnit
+        self.datetime = datetime
+        self.meal = meal
     }
 
     enum CodingKeys: String, CodingKey {
         case amount
         case weightUnit = "weight_unit"
+        case datetime
+        case meal
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -169,6 +192,12 @@ public struct NutritionDiaryAmountPatch: Encodable, Equatable, Sendable {
             try container.encode(weightUnit, forKey: .weightUnit)
         } else {
             try container.encodeNil(forKey: .weightUnit)
+        }
+        try container.encode(datetime, forKey: .datetime)
+        if let meal {
+            try container.encode(meal, forKey: .meal)
+        } else {
+            try container.encodeNil(forKey: .meal)
         }
     }
 }
@@ -186,6 +215,17 @@ extension Operations.NutritionplanList.Output {
 
 extension Operations.NutritiondiaryList.Output {
     fileprivate func value() throws -> Components.Schemas.PaginatedLogItemList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.MealList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedMealList {
         switch self {
         case .ok(let response):
             return try response.body.json

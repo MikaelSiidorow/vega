@@ -77,12 +77,18 @@ struct DailyDiaryView: View {
             Text(model.mutationErrorMessage ?? "")
         }
         .sheet(item: $pendingEdit) { item in
-            DiaryAmountEditor(item: item) { amount, weightUnitID in
+            DiaryEntryEditor(
+                item: item,
+                meals: model.diary?.meals ?? [],
+                fallbackDate: model.selectedDate
+            ) { amount, weightUnitID, date, mealID in
                 guard let id = item.remoteID else { return false }
-                return await model.updateEntryAmount(
+                return await model.updateEntry(
                     id: id,
                     amount: amount,
-                    weightUnitID: weightUnitID
+                    weightUnitID: weightUnitID,
+                    date: date,
+                    mealID: mealID
                 )
             }
         }
@@ -140,7 +146,7 @@ struct DailyDiaryView: View {
                 }
 
                 ForEach(Array(diary.sections.enumerated()), id: \.element.id) { index, section in
-                    Section(sectionTitle(section, index: index, sections: diary.sections)) {
+                    Section(sectionTitle(section, index: index, diary: diary)) {
                         ForEach(section.items) { item in
                             DiaryItemRow(
                                 item: item,
@@ -174,11 +180,17 @@ struct DailyDiaryView: View {
     private func sectionTitle(
         _ section: DiarySection,
         index: Int,
-        sections: [DiarySection]
+        diary: DailyDiary
     ) -> String {
         switch section.id {
-        case .meal:
-            let number = sections.prefix(index + 1).reduce(0) { count, section in
+        case .meal(let id):
+            if let meal = diary.meals.first(where: { $0.id == id }),
+                let name = meal.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                !name.isEmpty
+            {
+                return name
+            }
+            let number = diary.sections.prefix(index + 1).reduce(0) { count, section in
                 if case .meal = section.id { return count + 1 }
                 return count
             }
@@ -195,23 +207,31 @@ struct DailyDiaryView: View {
     }
 }
 
-private struct DiaryAmountEditor: View {
+private struct DiaryEntryEditor: View {
     let item: DiaryItem
-    let save: (String, Int?) async -> Bool
+    let meals: [DiaryMeal]
+    let save: (String, Int?, Date, String?) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var amount: String
     @State private var weightUnitID: Int?
+    @State private var date: Date
+    @State private var mealID: String?
     @State private var isSaving = false
 
     init(
         item: DiaryItem,
-        save: @escaping (String, Int?) async -> Bool
+        meals: [DiaryMeal],
+        fallbackDate: Date,
+        save: @escaping (String, Int?, Date, String?) async -> Bool
     ) {
         self.item = item
+        self.meals = meals
         self.save = save
         _amount = State(initialValue: NSDecimalNumber(decimal: item.loggedAmount).stringValue)
         _weightUnitID = State(initialValue: item.weightUnitID)
+        _date = State(initialValue: item.date ?? fallbackDate)
+        _mealID = State(initialValue: item.mealID)
     }
 
     var body: some View {
@@ -242,6 +262,24 @@ private struct DiaryAmountEditor: View {
                     }
                 }
 
+                Section("When and where") {
+                    DatePicker(
+                        "Date and time",
+                        selection: $date,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .accessibilityIdentifier("diary-edit-date-time")
+
+                    Picker("Meal", selection: $mealID) {
+                        Text("No meal").tag(nil as String?)
+                        ForEach(Array(meals.enumerated()), id: \.element.id) { index, meal in
+                            Text(mealTitle(meal, index: index)).tag(Optional(meal.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("diary-edit-meal")
+                }
+
                 if !amount.isEmpty, normalizedAmount == nil {
                     Section {
                         Text("Enter a positive amount with at most two decimal places.")
@@ -262,7 +300,7 @@ private struct DiaryAmountEditor: View {
                         guard let normalizedAmount else { return }
                         isSaving = true
                         Task {
-                            if await save(normalizedAmount, weightUnitID) {
+                            if await save(normalizedAmount, weightUnitID, date, mealID) {
                                 dismiss()
                             } else {
                                 isSaving = false
@@ -319,6 +357,11 @@ private struct DiaryAmountEditor: View {
         guard let grams else { return "—" }
         let energy = item.nutritionPer100Grams.scaled(toGrams: grams).energy
         return "\(energy.formatted(.number.precision(.fractionLength(0...1)))) kcal"
+    }
+
+    private func mealTitle(_ meal: DiaryMeal, index: Int) -> String {
+        let name = meal.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name?.isEmpty == false ? name! : "Meal \(index + 1)"
     }
 }
 
