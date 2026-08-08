@@ -13,6 +13,10 @@ nonisolated protocol DailyDiaryFetching: Sendable {
     func diary(for date: Date, calendar: Calendar) async throws -> DailyDiaryPayload
 }
 
+nonisolated protocol DiaryEntryDeleting: Sendable {
+    func deleteDiaryEntry(id: String) async throws
+}
+
 nonisolated protocol DailyDiaryTransport: Sendable {
     func plans(
         instance: InstanceURL,
@@ -36,6 +40,12 @@ nonisolated protocol DailyDiaryTransport: Sendable {
         session: AuthenticationSession,
         ids: [Int]
     ) async throws -> [WgerIngredient]
+
+    func deleteEntry(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        id: String
+    ) async throws
 }
 
 nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
@@ -93,9 +103,21 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
         )
         return page.results.map(\.vegaValue)
     }
+
+    func deleteEntry(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        id: String
+    ) async throws {
+        try await WgerAPIModule.deleteNutritionDiaryEntry(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            id: id
+        )
+    }
 }
 
-actor DailyDiaryAPI: DailyDiaryFetching {
+actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting {
     private static let pageSize = 100
     private let client: any AuthenticatedRequestExecuting
     private let transport: any DailyDiaryTransport
@@ -148,6 +170,13 @@ actor DailyDiaryAPI: DailyDiaryFetching {
         }
         ingredientCache.merge(result.ingredients) { _, latest in latest }
         return result
+    }
+
+    func deleteDiaryEntry(id: String) async throws {
+        let transport = transport
+        try await client.perform { instance, session in
+            try await transport.deleteEntry(instance: instance, session: session, id: id)
+        }
     }
 
     private static func allPlans(

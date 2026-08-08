@@ -83,6 +83,23 @@ public enum WgerAPIModule {
         )
         return try response.value()
     }
+
+    /// Deletes one nutrition diary entry.
+    public static func deleteNutritionDiaryEntry(
+        serverURL: URL,
+        accessToken: String,
+        id: String
+    ) async throws {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.nutritiondiaryDestroy(path: .init(id: id))
+
+        switch response {
+        case .noContent:
+            return
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
 }
 
 extension Operations.NutritionplanList.Output {

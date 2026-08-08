@@ -5,8 +5,9 @@ nonisolated enum DiaryFixtureMode: Equatable, Sendable {
     case plannedMeals
 }
 
-nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
+actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting {
     let mode: DiaryFixtureMode
+    private var deletedEntryIDs: Set<String> = []
 
     func diary(for date: Date, calendar: Calendar) -> DailyDiaryPayload {
         DailyDiaryPayload(
@@ -17,7 +18,10 @@ nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
                 end: nil,
                 description: "Balanced nutrition"
             ),
-            entries: entries(for: date, calendar: calendar),
+            entries: entries(for: date, calendar: calendar).filter {
+                guard let id = $0.id else { return true }
+                return !deletedEntryIDs.contains(id)
+            },
             ingredients: [
                 1: ingredient(
                     id: 1,
@@ -51,6 +55,10 @@ nonisolated struct FixtureDailyDiaryFetcher: DailyDiaryFetching {
                 ),
             ]
         )
+    }
+
+    func deleteDiaryEntry(id: String) {
+        deletedEntryIDs.insert(id)
     }
 
     private func entries(for date: Date, calendar: Calendar) -> [WgerNutritionDiaryEntry] {

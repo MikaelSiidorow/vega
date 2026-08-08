@@ -28,17 +28,21 @@ struct ContentView: View {
             initialValue: SignInModel(sessionCoordinator: sessionCoordinator)
         )
         if let fixtureMode {
+            let diaryStore = FixtureDailyDiaryStore(mode: fixtureMode)
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
                     selectedDate: Date(timeIntervalSince1970: 1_785_888_000),
                     calendar: fixtureCalendar,
-                    diaryFetcher: FixtureDailyDiaryFetcher(mode: fixtureMode)
+                    diaryFetcher: diaryStore,
+                    diaryEntryDeleter: diaryStore
                 )
             )
         } else {
+            let diaryAPI = DailyDiaryAPI(client: authenticatedClient)
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
-                    diaryFetcher: DailyDiaryAPI(client: authenticatedClient)
+                    diaryFetcher: diaryAPI,
+                    diaryEntryDeleter: diaryAPI
                 )
             )
         }

@@ -84,6 +84,7 @@ nonisolated struct DiarySection: Equatable, Identifiable, Sendable {
 
 nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
     let id: String
+    let remoteID: String?
     let ingredientID: Int
     let name: String
     let brand: String?
@@ -117,6 +118,7 @@ nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
 
         return DiaryItem(
             id: entry.id ?? fallbackID,
+            remoteID: entry.id,
             ingredientID: entry.ingredientID,
             name: ingredient?.name ?? "Ingredient \(entry.ingredientID)",
             brand: ingredient?.brand,
