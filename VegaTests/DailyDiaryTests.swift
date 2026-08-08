@@ -43,11 +43,11 @@ nonisolated struct DailyDiaryTests {
 
         #expect(diary.date == date)
         #expect(diary.planID == "plan")
-        #expect(diary.meals.map { $0.id } == [DiaryMeal.ID.meal("breakfast"), .unassigned])
-        #expect(diary.meals.map { $0.items.count } == [2, 1])
-        #expect(diary.meals[0].items[1].loggedAmount == Decimal(2))
-        #expect(diary.meals[0].items[1].unitName == "slice")
-        #expect(diary.meals[0].items[1].grams == Decimal(60))
+        #expect(diary.sections.map { $0.id } == [DiarySection.ID.meal("breakfast"), .unscheduled])
+        #expect(diary.sections.map { $0.items.count } == [2, 1])
+        #expect(diary.sections[0].items[1].loggedAmount == Decimal(2))
+        #expect(diary.sections[0].items[1].unitName == "slice")
+        #expect(diary.sections[0].items[1].grams == Decimal(60))
         #expect(diary.totals.energy == Decimal(string: "280.5"))
         #expect(diary.totals.protein == Decimal(string: "23.55"))
         #expect(diary.totals.carbohydrates == Decimal(string: "56.1"))
@@ -63,7 +63,7 @@ nonisolated struct DailyDiaryTests {
         )
 
         let diary = try DailyDiary.build(from: payload, date: Date())
-        guard let item = diary.meals.first?.items.first else {
+        guard let item = diary.sections.first?.items.first else {
             Issue.record("Expected one diary item")
             return
         }
@@ -72,6 +72,75 @@ nonisolated struct DailyDiaryTests {
         #expect(item.name == "Ingredient 404")
         #expect(item.grams == 25)
         #expect(item.nutrition == .zero)
+    }
+
+    @Test
+    func groupsUnassignedEntriesByTimeWithoutDisturbingServerMeals() throws {
+        let eight = Date(timeIntervalSince1970: 1_785_916_800)
+        let payload = DailyDiaryPayload(
+            plan: Self.plan,
+            entries: [
+                Self.entry(
+                    "late",
+                    mealID: nil,
+                    ingredientID: 1,
+                    amount: "10",
+                    date: eight.addingTimeInterval(12 * 60 * 60)
+                ),
+                Self.entry(
+                    "early-2",
+                    mealID: nil,
+                    ingredientID: 1,
+                    amount: "10",
+                    date: eight.addingTimeInterval(50 * 60)
+                ),
+                Self.entry(
+                    "breakfast",
+                    mealID: "server-breakfast",
+                    ingredientID: 1,
+                    amount: "10",
+                    date: eight.addingTimeInterval(20 * 60)
+                ),
+                Self.entry(
+                    "early-3",
+                    mealID: nil,
+                    ingredientID: 1,
+                    amount: "10",
+                    date: eight.addingTimeInterval(100 * 60)
+                ),
+                Self.entry("unknown", mealID: nil, ingredientID: 1, amount: "10"),
+                Self.entry(
+                    "early-1",
+                    mealID: nil,
+                    ingredientID: 1,
+                    amount: "10",
+                    date: eight
+                ),
+                Self.entry(
+                    "boundary",
+                    mealID: nil,
+                    ingredientID: 1,
+                    amount: "10",
+                    date: eight.addingTimeInterval(160 * 60)
+                ),
+            ],
+            ingredients: [1: Self.ingredient(id: 1)]
+        )
+
+        let diary = try DailyDiary.build(from: payload, date: eight)
+
+        #expect(
+            diary.sections.map(\.id)
+                == [
+                    .timeGroup("early-1"),
+                    .meal("server-breakfast"),
+                    .timeGroup("boundary"),
+                    .timeGroup("late"),
+                    .unscheduled,
+                ]
+        )
+        #expect(diary.sections[0].items.map(\.id) == ["early-1", "early-2", "early-3"])
+        #expect(diary.sections[1].items.map(\.id) == ["breakfast"])
     }
 
     @Test
@@ -102,7 +171,8 @@ nonisolated struct DailyDiaryTests {
         mealID: String?,
         ingredientID: Int,
         weightUnitID: Int? = nil,
-        amount: String
+        amount: String,
+        date: Date? = nil
     ) -> WgerNutritionDiaryEntry {
         WgerNutritionDiaryEntry(
             id: id,
@@ -110,7 +180,7 @@ nonisolated struct DailyDiaryTests {
             mealID: mealID,
             ingredientID: ingredientID,
             weightUnitID: weightUnitID,
-            date: nil,
+            date: date,
             amount: amount
         )
     }

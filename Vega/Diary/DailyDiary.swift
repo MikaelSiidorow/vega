@@ -3,43 +3,79 @@ import Foundation
 nonisolated struct DailyDiary: Equatable, Sendable {
     let date: Date
     let planID: String?
-    let meals: [DiaryMeal]
+    let sections: [DiarySection]
     let totals: NutritionTotals
 
     static func build(from payload: DailyDiaryPayload, date: Date) throws -> DailyDiary {
-        var mealOrder: [DiaryMeal.ID] = []
-        var itemsByMeal: [DiaryMeal.ID: [DiaryItem]] = [:]
+        var sectionOrder: [DiarySection.ID] = []
+        var itemsBySection: [DiarySection.ID: [DiaryItem]] = [:]
+        var currentTimeGroup: DiarySection.ID?
+        var lastUnassignedDate: Date?
 
-        for (index, entry) in payload.entries.enumerated() {
-            let mealID = entry.mealID.map(DiaryMeal.ID.meal) ?? .unassigned
-            if itemsByMeal[mealID] == nil {
-                mealOrder.append(mealID)
-                itemsByMeal[mealID] = []
+        for (index, entry) in ordered(payload.entries) {
+            let sectionID: DiarySection.ID
+            if let mealID = entry.mealID {
+                sectionID = .meal(mealID)
+            } else if let entryDate = entry.date {
+                if let lastUnassignedDate, let currentTimeGroup,
+                    entryDate.timeIntervalSince(lastUnassignedDate) < 60 * 60
+                {
+                    sectionID = currentTimeGroup
+                } else {
+                    sectionID = .timeGroup(entry.id ?? "\(entry.planID)-\(index)")
+                    currentTimeGroup = sectionID
+                }
+                lastUnassignedDate = entryDate
+            } else {
+                sectionID = .unscheduled
+            }
+
+            if itemsBySection[sectionID] == nil {
+                sectionOrder.append(sectionID)
+                itemsBySection[sectionID] = []
             }
             let item = try DiaryItem.build(
                 from: entry,
                 ingredient: payload.ingredients[entry.ingredientID],
                 fallbackID: "\(entry.planID)-\(index)"
             )
-            itemsByMeal[mealID, default: []].append(item)
+            itemsBySection[sectionID, default: []].append(item)
         }
 
-        let meals = mealOrder.map { id in
-            DiaryMeal(id: id, items: itemsByMeal[id, default: []])
+        let sections = sectionOrder.map { id in
+            DiarySection(id: id, items: itemsBySection[id, default: []])
         }
         return DailyDiary(
             date: date,
             planID: payload.plan?.id,
-            meals: meals,
-            totals: meals.flatMap(\.items).reduce(.zero) { $0 + $1.nutrition }
+            sections: sections,
+            totals: sections.flatMap(\.items).reduce(.zero) { $0 + $1.nutrition }
         )
+    }
+
+    private static func ordered(
+        _ entries: [WgerNutritionDiaryEntry]
+    ) -> [(offset: Int, element: WgerNutritionDiaryEntry)] {
+        entries.enumerated().sorted { lhs, rhs in
+            switch (lhs.element.date, rhs.element.date) {
+            case (let lhsDate?, let rhsDate?):
+                lhsDate == rhsDate ? lhs.offset < rhs.offset : lhsDate < rhsDate
+            case (_?, nil):
+                true
+            case (nil, _?):
+                false
+            case (nil, nil):
+                lhs.offset < rhs.offset
+            }
+        }
     }
 }
 
-nonisolated struct DiaryMeal: Equatable, Identifiable, Sendable {
+nonisolated struct DiarySection: Equatable, Identifiable, Sendable {
     enum ID: Equatable, Hashable, Sendable {
         case meal(String)
-        case unassigned
+        case timeGroup(String)
+        case unscheduled
     }
 
     let id: ID
