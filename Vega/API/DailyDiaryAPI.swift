@@ -17,6 +17,14 @@ nonisolated protocol DiaryEntryDeleting: Sendable {
     func deleteDiaryEntry(id: String) async throws
 }
 
+nonisolated protocol DiaryEntryAmountUpdating: Sendable {
+    func updateDiaryEntryAmount(
+        id: String,
+        amount: String,
+        weightUnitID: Int?
+    ) async throws
+}
+
 nonisolated protocol DailyDiaryTransport: Sendable {
     func plans(
         instance: InstanceURL,
@@ -45,6 +53,14 @@ nonisolated protocol DailyDiaryTransport: Sendable {
         instance: InstanceURL,
         session: AuthenticationSession,
         id: String
+    ) async throws
+
+    func updateEntryAmount(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        id: String,
+        amount: String,
+        weightUnitID: Int?
     ) async throws
 }
 
@@ -115,9 +131,24 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
             id: id
         )
     }
+
+    func updateEntryAmount(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        id: String,
+        amount: String,
+        weightUnitID: Int?
+    ) async throws {
+        try await WgerAPIModule.updateNutritionDiaryAmount(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            id: id,
+            patch: NutritionDiaryAmountPatch(amount: amount, weightUnit: weightUnitID)
+        )
+    }
 }
 
-actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting {
+actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpdating {
     private static let pageSize = 100
     private let client: any AuthenticatedRequestExecuting
     private let transport: any DailyDiaryTransport
@@ -176,6 +207,23 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting {
         let transport = transport
         try await client.perform { instance, session in
             try await transport.deleteEntry(instance: instance, session: session, id: id)
+        }
+    }
+
+    func updateDiaryEntryAmount(
+        id: String,
+        amount: String,
+        weightUnitID: Int?
+    ) async throws {
+        let transport = transport
+        try await client.perform { instance, session in
+            try await transport.updateEntryAmount(
+                instance: instance,
+                session: session,
+                id: id,
+                amount: amount,
+                weightUnitID: weightUnitID
+            )
         }
     }
 

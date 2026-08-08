@@ -14,10 +14,13 @@ final class DiaryScreenModel {
     private(set) var selectedDate: Date
     private(set) var phase: Phase = .idle
     private(set) var deletingEntryID: String?
+    private(set) var updatingEntryID: String?
+    private(set) var mutationErrorTitle: String?
     var mutationErrorMessage: String?
 
     private let diaryFetcher: any DailyDiaryFetching
     private let diaryEntryDeleter: any DiaryEntryDeleting
+    private let diaryEntryAmountUpdater: any DiaryEntryAmountUpdating
     private let calendar: Calendar
     private var selectionRevision = 0
 
@@ -25,11 +28,13 @@ final class DiaryScreenModel {
         selectedDate: Date = Date(),
         calendar: Calendar = .current,
         diaryFetcher: any DailyDiaryFetching,
-        diaryEntryDeleter: any DiaryEntryDeleting
+        diaryEntryDeleter: any DiaryEntryDeleting,
+        diaryEntryAmountUpdater: any DiaryEntryAmountUpdating
     ) {
         self.calendar = calendar
         self.diaryFetcher = diaryFetcher
         self.diaryEntryDeleter = diaryEntryDeleter
+        self.diaryEntryAmountUpdater = diaryEntryAmountUpdater
         self.selectedDate = calendar.startOfDay(for: selectedDate)
     }
 
@@ -81,6 +86,7 @@ final class DiaryScreenModel {
     func deleteEntry(id: String) async {
         guard deletingEntryID == nil else { return }
         deletingEntryID = id
+        mutationErrorTitle = nil
         mutationErrorMessage = nil
         defer { deletingEntryID = nil }
 
@@ -90,7 +96,36 @@ final class DiaryScreenModel {
         } catch is CancellationError {
             return
         } catch {
+            mutationErrorTitle = "Couldn’t delete entry"
             mutationErrorMessage = Self.mutationMessage(for: error)
+        }
+    }
+
+    func updateEntryAmount(
+        id: String,
+        amount: String,
+        weightUnitID: Int?
+    ) async -> Bool {
+        guard updatingEntryID == nil else { return false }
+        updatingEntryID = id
+        mutationErrorTitle = nil
+        mutationErrorMessage = nil
+        defer { updatingEntryID = nil }
+
+        do {
+            try await diaryEntryAmountUpdater.updateDiaryEntryAmount(
+                id: id,
+                amount: amount,
+                weightUnitID: weightUnitID
+            )
+            try await reloadPreservingContent()
+            return true
+        } catch is CancellationError {
+            return false
+        } catch {
+            mutationErrorTitle = "Couldn’t save changes"
+            mutationErrorMessage = Self.updateMessage(for: error)
+            return false
         }
     }
 
@@ -126,5 +161,10 @@ final class DiaryScreenModel {
     private static func mutationMessage(for error: Error) -> String {
         (error as? LocalizedError)?.errorDescription
             ?? "Vega could not delete this entry. Please try again."
+    }
+
+    private static func updateMessage(for error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription
+            ?? "Vega could not update this entry. Please try again."
     }
 }

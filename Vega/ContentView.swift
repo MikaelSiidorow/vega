@@ -34,7 +34,8 @@ struct ContentView: View {
                     selectedDate: Date(timeIntervalSince1970: 1_785_888_000),
                     calendar: fixtureCalendar,
                     diaryFetcher: diaryStore,
-                    diaryEntryDeleter: diaryStore
+                    diaryEntryDeleter: diaryStore,
+                    diaryEntryAmountUpdater: diaryStore
                 )
             )
         } else {
@@ -42,7 +43,8 @@ struct ContentView: View {
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
                     diaryFetcher: diaryAPI,
-                    diaryEntryDeleter: diaryAPI
+                    diaryEntryDeleter: diaryAPI,
+                    diaryEntryAmountUpdater: diaryAPI
                 )
             )
         }
