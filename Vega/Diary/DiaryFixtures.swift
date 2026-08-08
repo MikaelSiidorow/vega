@@ -9,6 +9,10 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting {
     let mode: DiaryFixtureMode
     private var deletedEntryIDs: Set<String> = []
 
+    init(mode: DiaryFixtureMode) {
+        self.mode = mode
+    }
+
     func diary(for date: Date, calendar: Calendar) -> DailyDiaryPayload {
         DailyDiaryPayload(
             plan: WgerNutritionPlan(

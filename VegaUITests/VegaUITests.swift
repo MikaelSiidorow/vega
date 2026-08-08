@@ -61,6 +61,39 @@ final class VegaUITests: XCTestCase {
     }
 
     @MainActor
+    func testDeletesDiaryEntry() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        let blueberries = app.descendants(matching: .any)["diary-item-blueberries"]
+        XCTAssertTrue(blueberries.waitForExistence(timeout: 5))
+        blueberries.swipeLeft()
+        XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 2))
+        app.buttons["Delete"].tap()
+
+        XCTAssertTrue(app.buttons["Delete entry"].waitForExistence(timeout: 2))
+        let confirmation = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        confirmation.name = "Delete diary entry confirmation"
+        confirmation.lifetime = .keepAlways
+        add(confirmation)
+
+        app.buttons["Delete entry"].tap()
+        let removed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: blueberries
+        )
+        wait(for: [removed], timeout: 5)
+        XCTAssertTrue(app.descendants(matching: .any)["diary-item-oats"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["diary-item-tofu"].exists)
+
+        let result = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        result.name = "Diary after deleting blueberries"
+        result.lifetime = .keepAlways
+        add(result)
+    }
+
+    @MainActor
     private func assertPopulatedDiary(in app: XCUIApplication) {
         let elements = app.descendants(matching: .any)
         XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
