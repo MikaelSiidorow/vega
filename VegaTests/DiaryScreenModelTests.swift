@@ -14,7 +14,7 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: fetcher,
             diaryEntryDeleter: ScreenDiaryDeleter(),
-            diaryEntryAmountUpdater: ScreenDiaryAmountUpdater()
+            diaryEntryUpdater: ScreenDiaryUpdater()
         )
 
         await model.load()
@@ -35,7 +35,7 @@ struct DiaryScreenModelTests {
             calendar: calendar,
             diaryFetcher: ScreenDiaryFetcher { _, _ in .empty },
             diaryEntryDeleter: ScreenDiaryDeleter(),
-            diaryEntryAmountUpdater: ScreenDiaryAmountUpdater()
+            diaryEntryUpdater: ScreenDiaryUpdater()
         )
 
         model.selectPreviousDay()
@@ -56,7 +56,7 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: fetcher,
             diaryEntryDeleter: ScreenDiaryDeleter(),
-            diaryEntryAmountUpdater: ScreenDiaryAmountUpdater()
+            diaryEntryUpdater: ScreenDiaryUpdater()
         )
 
         await model.load()
@@ -82,7 +82,7 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: fetcher,
             diaryEntryDeleter: ScreenDiaryDeleter(),
-            diaryEntryAmountUpdater: ScreenDiaryAmountUpdater()
+            diaryEntryUpdater: ScreenDiaryUpdater()
         )
 
         let oldLoad = Task { await model.load() }
@@ -103,7 +103,7 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: store,
             diaryEntryDeleter: store,
-            diaryEntryAmountUpdater: store
+            diaryEntryUpdater: store
         )
         await model.load()
 
@@ -123,7 +123,7 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: store,
             diaryEntryDeleter: FailingDiaryDeleter(),
-            diaryEntryAmountUpdater: store
+            diaryEntryUpdater: store
         )
         await model.load()
         let originalDiary = try #require(model.diary)
@@ -142,14 +142,19 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: store,
             diaryEntryDeleter: store,
-            diaryEntryAmountUpdater: store
+            diaryEntryUpdater: store
         )
         await model.load()
+        let originalTofu = try #require(
+            model.diary?.sections.flatMap(\.items).first { $0.id == "tofu" }
+        )
 
-        let didSave = await model.updateEntryAmount(
+        let didSave = await model.updateEntry(
             id: "tofu",
             amount: "150",
-            weightUnitID: nil
+            weightUnitID: nil,
+            date: try #require(originalTofu.date),
+            mealID: originalTofu.mealID
         )
 
         let tofu = try #require(
@@ -170,21 +175,56 @@ struct DiaryScreenModelTests {
             calendar: Self.utcCalendar,
             diaryFetcher: store,
             diaryEntryDeleter: store,
-            diaryEntryAmountUpdater: FailingDiaryAmountUpdater()
+            diaryEntryUpdater: FailingDiaryUpdater()
         )
         await model.load()
         let originalDiary = try #require(model.diary)
 
-        let didSave = await model.updateEntryAmount(
+        let didSave = await model.updateEntry(
             id: "tofu",
             amount: "150",
-            weightUnitID: nil
+            weightUnitID: nil,
+            date: try Self.date("2026-08-05T12:30:00Z"),
+            mealID: nil
         )
 
         #expect(!didSave)
         #expect(model.diary == originalDiary)
         #expect(model.mutationErrorTitle == "Couldn’t save changes")
         #expect(model.mutationErrorMessage == "The diary service is unavailable.")
+    }
+
+    @Test
+    func updatesTimeAndMealThenRegroupsEntry() async throws {
+        let store = FixtureDailyDiaryStore(mode: .plannedMeals)
+        let model = DiaryScreenModel(
+            selectedDate: try Self.date("2026-08-05T12:00:00Z"),
+            calendar: Self.utcCalendar,
+            diaryFetcher: store,
+            diaryEntryDeleter: store,
+            diaryEntryUpdater: store
+        )
+        await model.load()
+        let tofu = try #require(
+            model.diary?.sections.flatMap(\.items).first { $0.id == "tofu" }
+        )
+        let newDate = try Self.date("2026-08-05T08:30:00Z")
+
+        let didSave = await model.updateEntry(
+            id: "tofu",
+            amount: NSDecimalNumber(decimal: tofu.loggedAmount).stringValue,
+            weightUnitID: tofu.weightUnitID,
+            date: newDate,
+            mealID: "breakfast"
+        )
+
+        let breakfast = try #require(
+            model.diary?.sections.first { $0.id == .meal("breakfast") }
+        )
+        #expect(didSave)
+        #expect(breakfast.items.map(\.id) == ["oats", "blueberries", "tofu"])
+        #expect(breakfast.items.last?.date == newDate)
+        #expect(model.diary?.sections.contains { $0.id == .meal("dinner") } == false)
     }
 
     private static var utcCalendar: Calendar {
@@ -216,12 +256,24 @@ private nonisolated struct FailingDiaryDeleter: DiaryEntryDeleting {
     }
 }
 
-private nonisolated struct ScreenDiaryAmountUpdater: DiaryEntryAmountUpdating {
-    func updateDiaryEntryAmount(id: String, amount: String, weightUnitID: Int?) {}
+private nonisolated struct ScreenDiaryUpdater: DiaryEntryUpdating {
+    func updateDiaryEntry(
+        id: String,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) {}
 }
 
-private nonisolated struct FailingDiaryAmountUpdater: DiaryEntryAmountUpdating {
-    func updateDiaryEntryAmount(id: String, amount: String, weightUnitID: Int?) throws {
+private nonisolated struct FailingDiaryUpdater: DiaryEntryUpdating {
+    func updateDiaryEntry(
+        id: String,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) throws {
         throw ScreenDiaryError.unavailable
     }
 }

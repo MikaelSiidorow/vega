@@ -34,6 +34,16 @@ nonisolated struct DailyDiaryAPITests {
                     hasNextPage: false
                 ),
             ],
+            mealPages: [
+                0: WgerPage(
+                    values: [Self.meal("breakfast", order: 1)],
+                    hasNextPage: true
+                ),
+                1: WgerPage(
+                    values: [Self.meal("dinner", order: 2)],
+                    hasNextPage: false
+                ),
+            ],
             ingredientValues: [Self.ingredient(12), Self.ingredient(34)]
         )
         let api = DailyDiaryAPI(
@@ -49,10 +59,13 @@ nonisolated struct DailyDiaryAPITests {
         #expect(result.plan?.id == "active")
         #expect(result.entries.compactMap(\.id) == ["one", "two", "three"])
         #expect(result.ingredients.keys.sorted() == [12, 34])
+        #expect(result.meals.map(\.id) == ["breakfast", "dinner"])
         #expect(await transport.planOffsets == [0, 2])
         #expect(await transport.entryOffsets == [0, 1])
         #expect(await transport.requestedPlanIDs == ["active", "active"])
         #expect(await transport.ingredientRequests == [[12, 34]])
+        #expect(await transport.mealOffsets == [0, 1])
+        #expect(await transport.requestedMealPlanIDs == ["active", "active"])
 
         let requestedIntervals = await transport.requestedIntervals
         let bounds = try #require(requestedIntervals.first)
@@ -83,6 +96,7 @@ nonisolated struct DailyDiaryAPITests {
         #expect(result == .empty)
         #expect(await transport.entryOffsets.isEmpty)
         #expect(await transport.ingredientRequests.isEmpty)
+        #expect(await transport.mealOffsets.isEmpty)
     }
 
     @Test
@@ -99,34 +113,55 @@ nonisolated struct DailyDiaryAPITests {
     }
 
     @Test
-    func updatesAmountAndWeightUnitThroughAuthenticatedTransport() async throws {
+    func updatesEditableFieldsThroughAuthenticatedTransport() async throws {
         let transport = DiaryTransportStub(planPages: [:])
         let api = DailyDiaryAPI(
             client: DiaryAuthenticatedExecutor(),
             transport: transport
         )
 
-        try await api.updateDiaryEntryAmount(
+        let date = try #require(ISO8601DateFormatter().date(from: "2026-08-05T12:30:00Z"))
+        try await api.updateDiaryEntry(
             id: "entry-id",
             amount: "1.5",
-            weightUnitID: 31
+            weightUnitID: 31,
+            date: date,
+            mealID: "dinner"
         )
 
         #expect(
-            await transport.amountUpdates
-                == [DiaryAmountUpdate(id: "entry-id", amount: "1.5", weightUnitID: 31)]
+            await transport.entryUpdates
+                == [
+                    DiaryEntryUpdate(
+                        id: "entry-id",
+                        amount: "1.5",
+                        weightUnitID: 31,
+                        date: date,
+                        mealID: "dinner"
+                    )
+                ]
         )
     }
 
     @Test
-    func gramsPatchExplicitlyClearsWeightUnit() throws {
-        let patch = NutritionDiaryAmountPatch(amount: "150", weightUnit: nil)
+    func patchExplicitlyClearsWeightUnitAndMeal() throws {
+        let date = try #require(ISO8601DateFormatter().date(from: "2026-08-05T12:30:00Z"))
+        let patch = NutritionDiaryEntryPatch(
+            amount: "150",
+            weightUnit: nil,
+            datetime: date,
+            meal: nil
+        )
 
-        let data = try JSONEncoder().encode(patch)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(patch)
         let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
         #expect(json["amount"] as? String == "150")
         #expect(json["weight_unit"] is NSNull)
+        #expect(json["meal"] is NSNull)
+        #expect(json["datetime"] as? String == "2026-08-05T12:30:00Z")
     }
 
     private static func plan(
@@ -167,6 +202,10 @@ nonisolated struct DailyDiaryAPITests {
             weightUnits: []
         )
     }
+
+    private static func meal(_ id: String, order: Int) -> WgerMeal {
+        WgerMeal(id: id, planID: "active", order: order, time: nil, name: id.capitalized)
+    }
 }
 
 private nonisolated struct DiaryAuthenticatedExecutor: AuthenticatedRequestExecuting {
@@ -183,22 +222,27 @@ private nonisolated struct DiaryAuthenticatedExecutor: AuthenticatedRequestExecu
 private actor DiaryTransportStub: DailyDiaryTransport {
     private let planPages: [Int: WgerPage<WgerNutritionPlan>]
     private let entryPages: [Int: WgerPage<WgerNutritionDiaryEntry>]
+    private let mealPages: [Int: WgerPage<WgerMeal>]
     private let ingredientValues: [WgerIngredient]
     private(set) var planOffsets: [Int] = []
     private(set) var entryOffsets: [Int] = []
     private(set) var requestedPlanIDs: [String] = []
     private(set) var requestedIntervals: [DateInterval] = []
     private(set) var ingredientRequests: [[Int]] = []
+    private(set) var mealOffsets: [Int] = []
+    private(set) var requestedMealPlanIDs: [String] = []
     private(set) var deletedEntryIDs: [String] = []
-    private(set) var amountUpdates: [DiaryAmountUpdate] = []
+    private(set) var entryUpdates: [DiaryEntryUpdate] = []
 
     init(
         planPages: [Int: WgerPage<WgerNutritionPlan>],
         entryPages: [Int: WgerPage<WgerNutritionDiaryEntry>] = [:],
+        mealPages: [Int: WgerPage<WgerMeal>] = [:],
         ingredientValues: [WgerIngredient] = []
     ) {
         self.planPages = planPages
         self.entryPages = entryPages
+        self.mealPages = mealPages
         self.ingredientValues = ingredientValues
     }
 
@@ -236,6 +280,18 @@ private actor DiaryTransportStub: DailyDiaryTransport {
         return ingredientValues.filter { ids.contains($0.id) }
     }
 
+    func meals(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String,
+        limit: Int,
+        offset: Int
+    ) -> WgerPage<WgerMeal> {
+        mealOffsets.append(offset)
+        requestedMealPlanIDs.append(planID)
+        return mealPages[offset] ?? WgerPage(values: [], hasNextPage: false)
+    }
+
     func deleteEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
@@ -244,21 +300,31 @@ private actor DiaryTransportStub: DailyDiaryTransport {
         deletedEntryIDs.append(id)
     }
 
-    func updateEntryAmount(
+    func updateEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
         id: String,
         amount: String,
-        weightUnitID: Int?
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
     ) {
-        amountUpdates.append(
-            DiaryAmountUpdate(id: id, amount: amount, weightUnitID: weightUnitID)
+        entryUpdates.append(
+            DiaryEntryUpdate(
+                id: id,
+                amount: amount,
+                weightUnitID: weightUnitID,
+                date: date,
+                mealID: mealID
+            )
         )
     }
 }
 
-private nonisolated struct DiaryAmountUpdate: Equatable, Sendable {
+private nonisolated struct DiaryEntryUpdate: Equatable, Sendable {
     let id: String
     let amount: String
     let weightUnitID: Int?
+    let date: Date
+    let mealID: String?
 }

@@ -138,6 +138,43 @@ final class VegaUITests: XCTestCase {
     }
 
     @MainActor
+    func testEditsDiaryMealAssignment() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestPlannedDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        let tofu = app.descendants(matching: .any)["diary-item-tofu"]
+        XCTAssertTrue(tofu.waitForExistence(timeout: 5))
+        tofu.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["diary-edit-date-time"]
+                .waitForExistence(timeout: 2)
+        )
+        let meal = app.descendants(matching: .any)["diary-edit-meal"]
+        XCTAssertTrue(meal.exists)
+        meal.tap()
+        XCTAssertTrue(app.buttons["Breakfast"].waitForExistence(timeout: 2))
+        app.buttons["Breakfast"].tap()
+
+        let editor = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        editor.name = "Edit diary time and meal"
+        editor.lifetime = .keepAlways
+        add(editor)
+
+        app.buttons["save-diary-entry"].tap()
+        XCTAssertTrue(meal.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(tofu.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Breakfast"].exists)
+        XCTAssertTrue(app.staticTexts["Dinner"].waitForNonExistence(timeout: 2))
+
+        let result = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        result.name = "Diary after moving tofu to breakfast"
+        result.lifetime = .keepAlways
+        add(result)
+    }
+
+    @MainActor
     private func assertPopulatedDiary(in app: XCUIApplication) {
         let elements = app.descendants(matching: .any)
         XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
