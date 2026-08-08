@@ -19,6 +19,14 @@ nonisolated struct WgerNutritionDiaryEntry: Equatable, Sendable {
     let amount: String
 }
 
+nonisolated struct WgerMeal: Equatable, Sendable {
+    let id: String
+    let planID: String
+    let order: Int
+    let time: String?
+    let name: String?
+}
+
 nonisolated struct WgerIngredient: Equatable, Sendable {
     let id: Int
     let name: String
@@ -65,6 +73,13 @@ extension Components.Schemas.LogItem {
             date: datetime,
             amount: amount
         )
+    }
+}
+
+extension Components.Schemas.Meal {
+    nonisolated var vegaValue: WgerMeal? {
+        guard let id else { return nil }
+        return WgerMeal(id: id, planID: plan, order: order, time: time, name: name)
     }
 }
 

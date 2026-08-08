@@ -20,7 +20,7 @@ final class DiaryScreenModel {
 
     private let diaryFetcher: any DailyDiaryFetching
     private let diaryEntryDeleter: any DiaryEntryDeleting
-    private let diaryEntryAmountUpdater: any DiaryEntryAmountUpdating
+    private let diaryEntryUpdater: any DiaryEntryUpdating
     private let calendar: Calendar
     private var selectionRevision = 0
 
@@ -29,12 +29,12 @@ final class DiaryScreenModel {
         calendar: Calendar = .current,
         diaryFetcher: any DailyDiaryFetching,
         diaryEntryDeleter: any DiaryEntryDeleting,
-        diaryEntryAmountUpdater: any DiaryEntryAmountUpdating
+        diaryEntryUpdater: any DiaryEntryUpdating
     ) {
         self.calendar = calendar
         self.diaryFetcher = diaryFetcher
         self.diaryEntryDeleter = diaryEntryDeleter
-        self.diaryEntryAmountUpdater = diaryEntryAmountUpdater
+        self.diaryEntryUpdater = diaryEntryUpdater
         self.selectedDate = calendar.startOfDay(for: selectedDate)
     }
 
@@ -101,10 +101,12 @@ final class DiaryScreenModel {
         }
     }
 
-    func updateEntryAmount(
+    func updateEntry(
         id: String,
         amount: String,
-        weightUnitID: Int?
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
     ) async -> Bool {
         guard updatingEntryID == nil else { return false }
         updatingEntryID = id
@@ -113,10 +115,12 @@ final class DiaryScreenModel {
         defer { updatingEntryID = nil }
 
         do {
-            try await diaryEntryAmountUpdater.updateDiaryEntryAmount(
+            try await diaryEntryUpdater.updateDiaryEntry(
                 id: id,
                 amount: amount,
-                weightUnitID: weightUnitID
+                weightUnitID: weightUnitID,
+                date: date,
+                mealID: mealID
             )
             try await reloadPreservingContent()
             return true

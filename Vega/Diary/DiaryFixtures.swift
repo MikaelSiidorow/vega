@@ -5,10 +5,11 @@ nonisolated enum DiaryFixtureMode: Equatable, Sendable {
     case plannedMeals
 }
 
-actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpdating {
+actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating {
     let mode: DiaryFixtureMode
     private var deletedEntryIDs: Set<String> = []
     private var amountOverrides: [String: (amount: String, weightUnitID: Int?)] = [:]
+    private var scheduleOverrides: [String: (date: Date, mealID: String?)] = [:]
 
     init(mode: DiaryFixtureMode) {
         self.mode = mode
@@ -32,13 +33,15 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                     guard let id = entry.id, let override = amountOverrides[id] else {
                         return entry
                     }
+                    let schedule = scheduleOverrides[id]
+                    let mealID = if let schedule { schedule.mealID } else { entry.mealID }
                     return WgerNutritionDiaryEntry(
                         id: entry.id,
                         planID: entry.planID,
-                        mealID: entry.mealID,
+                        mealID: mealID,
                         ingredientID: entry.ingredientID,
                         weightUnitID: override.weightUnitID,
-                        date: entry.date,
+                        date: schedule?.date ?? entry.date,
                         amount: override.amount
                     )
                 },
@@ -73,7 +76,24 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                         WgerIngredientWeightUnit(id: 31, grams: 100, name: "portion")
                     ]
                 ),
-            ]
+            ],
+            meals: mode == .plannedMeals
+                ? [
+                    WgerMeal(
+                        id: "breakfast",
+                        planID: "fixture-plan",
+                        order: 1,
+                        time: "08:00:00",
+                        name: "Breakfast"
+                    ),
+                    WgerMeal(
+                        id: "dinner",
+                        planID: "fixture-plan",
+                        order: 2,
+                        time: "18:00:00",
+                        name: "Dinner"
+                    ),
+                ] : []
         )
     }
 
@@ -81,8 +101,15 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
         deletedEntryIDs.insert(id)
     }
 
-    func updateDiaryEntryAmount(id: String, amount: String, weightUnitID: Int?) {
+    func updateDiaryEntry(
+        id: String,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) {
         amountOverrides[id] = (amount, weightUnitID)
+        scheduleOverrides[id] = (date, mealID)
     }
 
     private func entries(for date: Date, calendar: Calendar) -> [WgerNutritionDiaryEntry] {
