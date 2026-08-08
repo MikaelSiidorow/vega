@@ -12,7 +12,8 @@ struct DiaryScreenModelTests {
         let model = DiaryScreenModel(
             selectedDate: date,
             calendar: Self.utcCalendar,
-            diaryFetcher: fetcher
+            diaryFetcher: fetcher,
+            diaryEntryDeleter: ScreenDiaryDeleter()
         )
 
         await model.load()
@@ -31,7 +32,8 @@ struct DiaryScreenModelTests {
         let model = DiaryScreenModel(
             selectedDate: try Self.date("2026-03-08T17:00:00Z"),
             calendar: calendar,
-            diaryFetcher: ScreenDiaryFetcher { _, _ in .empty }
+            diaryFetcher: ScreenDiaryFetcher { _, _ in .empty },
+            diaryEntryDeleter: ScreenDiaryDeleter()
         )
 
         model.selectPreviousDay()
@@ -50,7 +52,8 @@ struct DiaryScreenModelTests {
         let fetcher = RetryingDiaryFetcher()
         let model = DiaryScreenModel(
             calendar: Self.utcCalendar,
-            diaryFetcher: fetcher
+            diaryFetcher: fetcher,
+            diaryEntryDeleter: ScreenDiaryDeleter()
         )
 
         await model.load()
@@ -74,7 +77,8 @@ struct DiaryScreenModelTests {
         let model = DiaryScreenModel(
             selectedDate: firstDate,
             calendar: Self.utcCalendar,
-            diaryFetcher: fetcher
+            diaryFetcher: fetcher,
+            diaryEntryDeleter: ScreenDiaryDeleter()
         )
 
         let oldLoad = Task { await model.load() }
@@ -85,6 +89,43 @@ struct DiaryScreenModelTests {
 
         #expect(model.selectedDate == secondDate)
         #expect(model.diary?.date == secondDate)
+    }
+
+    @Test
+    func deletesEntryAndReloadsTheVisibleDiary() async throws {
+        let store = FixtureDailyDiaryStore(mode: .basicLogging)
+        let model = DiaryScreenModel(
+            selectedDate: try Self.date("2026-08-05T12:00:00Z"),
+            calendar: Self.utcCalendar,
+            diaryFetcher: store,
+            diaryEntryDeleter: store
+        )
+        await model.load()
+
+        await model.deleteEntry(id: "blueberries")
+
+        let itemIDs = try #require(model.diary).sections.flatMap(\.items).map(\.id)
+        #expect(itemIDs == ["oats", "tofu"])
+        #expect(model.deletingEntryID == nil)
+        #expect(model.mutationErrorMessage == nil)
+    }
+
+    @Test
+    func failedDeletionKeepsTheVisibleDiaryAndExposesError() async throws {
+        let store = FixtureDailyDiaryStore(mode: .basicLogging)
+        let model = DiaryScreenModel(
+            selectedDate: try Self.date("2026-08-05T12:00:00Z"),
+            calendar: Self.utcCalendar,
+            diaryFetcher: store,
+            diaryEntryDeleter: FailingDiaryDeleter()
+        )
+        await model.load()
+        let originalDiary = try #require(model.diary)
+
+        await model.deleteEntry(id: "blueberries")
+
+        #expect(model.diary == originalDiary)
+        #expect(model.mutationErrorMessage == "The diary service is unavailable.")
     }
 
     private static var utcCalendar: Calendar {
@@ -103,6 +144,16 @@ private nonisolated struct ScreenDiaryFetcher: DailyDiaryFetching {
 
     func diary(for date: Date, calendar: Calendar) async throws -> DailyDiaryPayload {
         try await response(date, calendar)
+    }
+}
+
+private nonisolated struct ScreenDiaryDeleter: DiaryEntryDeleting {
+    func deleteDiaryEntry(id: String) {}
+}
+
+private nonisolated struct FailingDiaryDeleter: DiaryEntryDeleting {
+    func deleteDiaryEntry(id: String) throws {
+        throw ScreenDiaryError.unavailable
     }
 }
 

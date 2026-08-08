@@ -84,6 +84,19 @@ nonisolated struct DailyDiaryAPITests {
         #expect(await transport.ingredientRequests.isEmpty)
     }
 
+    @Test
+    func deletesEntryThroughAuthenticatedTransport() async throws {
+        let transport = DiaryTransportStub(planPages: [:])
+        let api = DailyDiaryAPI(
+            client: DiaryAuthenticatedExecutor(),
+            transport: transport
+        )
+
+        try await api.deleteDiaryEntry(id: "entry-id")
+
+        #expect(await transport.deletedEntryIDs == ["entry-id"])
+    }
+
     private static func plan(
         _ id: String,
         start: String,
@@ -144,6 +157,7 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     private(set) var requestedPlanIDs: [String] = []
     private(set) var requestedIntervals: [DateInterval] = []
     private(set) var ingredientRequests: [[Int]] = []
+    private(set) var deletedEntryIDs: [String] = []
 
     init(
         planPages: [Int: WgerPage<WgerNutritionPlan>],
@@ -187,5 +201,13 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     ) -> [WgerIngredient] {
         ingredientRequests.append(ids)
         return ingredientValues.filter { ids.contains($0.id) }
+    }
+
+    func deleteEntry(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        id: String
+    ) {
+        deletedEntryIDs.append(id)
     }
 }
