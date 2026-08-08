@@ -13,18 +13,23 @@ final class DiaryScreenModel {
 
     private(set) var selectedDate: Date
     private(set) var phase: Phase = .idle
+    private(set) var deletingEntryID: String?
+    var mutationErrorMessage: String?
 
     private let diaryFetcher: any DailyDiaryFetching
+    private let diaryEntryDeleter: any DiaryEntryDeleting
     private let calendar: Calendar
     private var selectionRevision = 0
 
     init(
         selectedDate: Date = Date(),
         calendar: Calendar = .current,
-        diaryFetcher: any DailyDiaryFetching
+        diaryFetcher: any DailyDiaryFetching,
+        diaryEntryDeleter: any DiaryEntryDeleting
     ) {
         self.calendar = calendar
         self.diaryFetcher = diaryFetcher
+        self.diaryEntryDeleter = diaryEntryDeleter
         self.selectedDate = calendar.startOfDay(for: selectedDate)
     }
 
@@ -73,6 +78,32 @@ final class DiaryScreenModel {
         }
     }
 
+    func deleteEntry(id: String) async {
+        guard deletingEntryID == nil else { return }
+        deletingEntryID = id
+        mutationErrorMessage = nil
+        defer { deletingEntryID = nil }
+
+        do {
+            try await diaryEntryDeleter.deleteDiaryEntry(id: id)
+            try await reloadPreservingContent()
+        } catch is CancellationError {
+            return
+        } catch {
+            mutationErrorMessage = Self.mutationMessage(for: error)
+        }
+    }
+
+    private func reloadPreservingContent() async throws {
+        let requestedDate = selectedDate
+        let requestedRevision = selectionRevision
+        let payload = try await diaryFetcher.diary(for: requestedDate, calendar: calendar)
+        try Task.checkCancellation()
+        let diary = try DailyDiary.build(from: payload, date: requestedDate)
+        guard requestedRevision == selectionRevision, requestedDate == selectedDate else { return }
+        phase = .loaded(diary)
+    }
+
     private func selectDay(offset: Int) {
         guard let date = calendar.date(byAdding: .day, value: offset, to: selectedDate) else {
             return
@@ -90,5 +121,10 @@ final class DiaryScreenModel {
     private static func message(for error: Error) -> String {
         (error as? LocalizedError)?.errorDescription
             ?? "Vega could not load this diary. Please try again."
+    }
+
+    private static func mutationMessage(for error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription
+            ?? "Vega could not delete this entry. Please try again."
     }
 }

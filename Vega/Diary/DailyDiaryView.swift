@@ -5,6 +5,7 @@ struct DailyDiaryView: View {
     @Bindable var model: DiaryScreenModel
     let instanceName: String
     let signOut: () -> Void
+    @State private var pendingDeletion: DiaryItem?
 
     var body: some View {
         Group {
@@ -43,6 +44,36 @@ struct DailyDiaryView: View {
         }
         .task(id: model.selectedDate) {
             await model.load()
+        }
+        .confirmationDialog(
+            "Delete \(pendingDeletion?.name ?? "entry")?",
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete entry", role: .destructive) {
+                guard let id = pendingDeletion?.remoteID else { return }
+                pendingDeletion = nil
+                Task { await model.deleteEntry(id: id) }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeletion = nil
+            }
+        } message: {
+            Text("This removes the logged ingredient from your diary.")
+        }
+        .alert(
+            "Couldn’t delete entry",
+            isPresented: Binding(
+                get: { model.mutationErrorMessage != nil },
+                set: { if !$0 { model.mutationErrorMessage = nil } }
+            )
+        ) {
+            Button("OK") { model.mutationErrorMessage = nil }
+        } message: {
+            Text(model.mutationErrorMessage ?? "")
         }
     }
 
@@ -100,7 +131,18 @@ struct DailyDiaryView: View {
                 ForEach(Array(diary.sections.enumerated()), id: \.element.id) { index, section in
                     Section(sectionTitle(section, index: index, sections: diary.sections)) {
                         ForEach(section.items) { item in
-                            DiaryItemRow(item: item)
+                            DiaryItemRow(
+                                item: item,
+                                isDeleting: model.deletingEntryID == item.remoteID
+                            )
+                            .swipeActions {
+                                if let remoteID = item.remoteID {
+                                    Button("Delete", role: .destructive) {
+                                        pendingDeletion = item
+                                    }
+                                    .accessibilityIdentifier("delete-diary-item-\(remoteID)")
+                                }
+                            }
                         }
                     }
                 }
@@ -175,6 +217,7 @@ private struct NutritionSummary: View {
 
 private struct DiaryItemRow: View {
     let item: DiaryItem
+    let isDeleting: Bool
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -191,9 +234,16 @@ private struct DiaryItemRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text("\(item.nutrition.energy.formatted(.number.precision(.fractionLength(0)))) kcal")
+            if isDeleting {
+                ProgressView()
+                    .accessibilityLabel("Deleting \(item.name)")
+            } else {
+                Text(
+                    "\(item.nutrition.energy.formatted(.number.precision(.fractionLength(0)))) kcal"
+                )
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("diary-item-\(item.id)")
