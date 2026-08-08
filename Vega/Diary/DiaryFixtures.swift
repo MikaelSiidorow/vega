@@ -5,9 +5,10 @@ nonisolated enum DiaryFixtureMode: Equatable, Sendable {
     case plannedMeals
 }
 
-actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting {
+actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryAmountUpdating {
     let mode: DiaryFixtureMode
     private var deletedEntryIDs: Set<String> = []
+    private var amountOverrides: [String: (amount: String, weightUnitID: Int?)] = [:]
 
     init(mode: DiaryFixtureMode) {
         self.mode = mode
@@ -22,10 +23,25 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting {
                 end: nil,
                 description: "Balanced nutrition"
             ),
-            entries: entries(for: date, calendar: calendar).filter {
-                guard let id = $0.id else { return true }
-                return !deletedEntryIDs.contains(id)
-            },
+            entries: entries(for: date, calendar: calendar)
+                .filter {
+                    guard let id = $0.id else { return true }
+                    return !deletedEntryIDs.contains(id)
+                }
+                .map { entry in
+                    guard let id = entry.id, let override = amountOverrides[id] else {
+                        return entry
+                    }
+                    return WgerNutritionDiaryEntry(
+                        id: entry.id,
+                        planID: entry.planID,
+                        mealID: entry.mealID,
+                        ingredientID: entry.ingredientID,
+                        weightUnitID: override.weightUnitID,
+                        date: entry.date,
+                        amount: override.amount
+                    )
+                },
             ingredients: [
                 1: ingredient(
                     id: 1,
@@ -63,6 +79,10 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting {
 
     func deleteDiaryEntry(id: String) {
         deletedEntryIDs.insert(id)
+    }
+
+    func updateDiaryEntryAmount(id: String, amount: String, weightUnitID: Int?) {
+        amountOverrides[id] = (amount, weightUnitID)
     }
 
     private func entries(for date: Date, calendar: Calendar) -> [WgerNutritionDiaryEntry] {

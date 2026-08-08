@@ -6,6 +6,7 @@ struct DailyDiaryView: View {
     let instanceName: String
     let signOut: () -> Void
     @State private var pendingDeletion: DiaryItem?
+    @State private var pendingEdit: DiaryItem?
 
     var body: some View {
         Group {
@@ -65,7 +66,7 @@ struct DailyDiaryView: View {
             Text("This removes the logged ingredient from your diary.")
         }
         .alert(
-            "Couldn’t delete entry",
+            model.mutationErrorTitle ?? "Couldn’t change entry",
             isPresented: Binding(
                 get: { model.mutationErrorMessage != nil },
                 set: { if !$0 { model.mutationErrorMessage = nil } }
@@ -74,6 +75,16 @@ struct DailyDiaryView: View {
             Button("OK") { model.mutationErrorMessage = nil }
         } message: {
             Text(model.mutationErrorMessage ?? "")
+        }
+        .sheet(item: $pendingEdit) { item in
+            DiaryAmountEditor(item: item) { amount, weightUnitID in
+                guard let id = item.remoteID else { return false }
+                return await model.updateEntryAmount(
+                    id: id,
+                    amount: amount,
+                    weightUnitID: weightUnitID
+                )
+            }
         }
     }
 
@@ -135,6 +146,12 @@ struct DailyDiaryView: View {
                                 item: item,
                                 isDeleting: model.deletingEntryID == item.remoteID
                             )
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                guard item.remoteID != nil else { return }
+                                pendingEdit = item
+                            }
+                            .accessibilityAddTraits(item.remoteID == nil ? [] : .isButton)
                             .swipeActions {
                                 if let remoteID = item.remoteID {
                                     Button("Delete", role: .destructive) {
@@ -175,6 +192,133 @@ struct DailyDiaryView: View {
         case .unscheduled:
             return "Unscheduled"
         }
+    }
+}
+
+private struct DiaryAmountEditor: View {
+    let item: DiaryItem
+    let save: (String, Int?) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var amount: String
+    @State private var weightUnitID: Int?
+    @State private var isSaving = false
+
+    init(
+        item: DiaryItem,
+        save: @escaping (String, Int?) async -> Bool
+    ) {
+        self.item = item
+        self.save = save
+        _amount = State(initialValue: NSDecimalNumber(decimal: item.loggedAmount).stringValue)
+        _weightUnitID = State(initialValue: item.weightUnitID)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Amount") {
+                    TextField("Amount", text: $amount)
+                        .keyboardType(.decimalPad)
+                        .accessibilityIdentifier("diary-edit-amount")
+                    Picker("Unit", selection: $weightUnitID) {
+                        Text("grams").tag(nil as Int?)
+                        ForEach(item.weightUnits, id: \.id) { unit in
+                            Text(unit.name).tag(Optional(unit.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("diary-edit-unit")
+                }
+
+                Section("Before saving") {
+                    LabeledContent("Gram equivalent") {
+                        Text(gramDescription)
+                            .accessibilityIdentifier("diary-edit-grams")
+                    }
+                    LabeledContent("Energy") {
+                        Text(energyDescription)
+                            .accessibilityIdentifier("diary-edit-energy")
+                    }
+                }
+
+                if !amount.isEmpty, normalizedAmount == nil {
+                    Section {
+                        Text("Enter a positive amount with at most two decimal places.")
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Edit \(item.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .interactiveDismissDisabled(isSaving)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard let normalizedAmount else { return }
+                        isSaving = true
+                        Task {
+                            if await save(normalizedAmount, weightUnitID) {
+                                dismiss()
+                            } else {
+                                isSaving = false
+                            }
+                        }
+                    }
+                    .disabled(normalizedAmount == nil || isSaving)
+                    .accessibilityIdentifier("save-diary-entry")
+                }
+            }
+            .overlay {
+                if isSaving {
+                    ProgressView("Saving…")
+                        .padding()
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    private var normalizedAmount: String? {
+        let value = amount.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        let parts = value.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count <= 2,
+            let whole = parts.first,
+            !whole.isEmpty,
+            whole.count <= 4,
+            whole.allSatisfy(\.isNumber),
+            parts.count == 1 || (parts[1].count <= 2 && parts[1].allSatisfy(\.isNumber)),
+            let decimal = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX")),
+            decimal > 0
+        else { return nil }
+        return value
+    }
+
+    private var grams: Decimal? {
+        guard let normalizedAmount,
+            let amount = Decimal(
+                string: normalizedAmount,
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+        else { return nil }
+        let unitGrams = item.weightUnits.first { $0.id == weightUnitID }?.grams ?? 1
+        return amount * Decimal(unitGrams)
+    }
+
+    private var gramDescription: String {
+        guard let grams else { return "—" }
+        return "\(grams.formatted(.number.precision(.fractionLength(0...2)))) g"
+    }
+
+    private var energyDescription: String {
+        guard let grams else { return "—" }
+        let energy = item.nutritionPer100Grams.scaled(toGrams: grams).energy
+        return "\(energy.formatted(.number.precision(.fractionLength(0...1)))) kcal"
     }
 }
 

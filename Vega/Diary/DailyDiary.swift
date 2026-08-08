@@ -89,9 +89,12 @@ nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
     let name: String
     let brand: String?
     let loggedAmount: Decimal
+    let weightUnitID: Int?
     let unitName: String?
+    let weightUnits: [WgerIngredientWeightUnit]
     let grams: Decimal
     let date: Date?
+    let nutritionPer100Grams: NutritionTotals
     let nutrition: NutritionTotals
 
     fileprivate static func build(
@@ -103,18 +106,18 @@ nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
         let unit = ingredient?.weightUnits.first { $0.id == entry.weightUnitID }
         let grams = amount * Decimal(unit?.grams ?? 1)
 
-        let nutrition: NutritionTotals
+        let nutritionPer100Grams: NutritionTotals
         if let ingredient {
-            nutrition = NutritionTotals(
-                energy: Decimal(ingredient.energy) * grams / 100,
-                protein: try decimal(ingredient.protein, field: "protein") * grams / 100,
-                carbohydrates: try decimal(ingredient.carbohydrates, field: "carbohydrates")
-                    * grams / 100,
-                fat: try decimal(ingredient.fat, field: "fat") * grams / 100
+            nutritionPer100Grams = NutritionTotals(
+                energy: Decimal(ingredient.energy),
+                protein: try decimal(ingredient.protein, field: "protein"),
+                carbohydrates: try decimal(ingredient.carbohydrates, field: "carbohydrates"),
+                fat: try decimal(ingredient.fat, field: "fat")
             )
         } else {
-            nutrition = .zero
+            nutritionPer100Grams = .zero
         }
+        let nutrition = nutritionPer100Grams.scaled(toGrams: grams)
 
         return DiaryItem(
             id: entry.id ?? fallbackID,
@@ -123,9 +126,12 @@ nonisolated struct DiaryItem: Equatable, Identifiable, Sendable {
             name: ingredient?.name ?? "Ingredient \(entry.ingredientID)",
             brand: ingredient?.brand,
             loggedAmount: amount,
+            weightUnitID: entry.weightUnitID,
             unitName: unit?.name,
+            weightUnits: ingredient?.weightUnits ?? [],
             grams: grams,
             date: entry.date,
+            nutritionPer100Grams: nutritionPer100Grams,
             nutrition: nutrition
         )
     }
@@ -152,6 +158,15 @@ nonisolated struct NutritionTotals: Equatable, Sendable {
             protein: lhs.protein + rhs.protein,
             carbohydrates: lhs.carbohydrates + rhs.carbohydrates,
             fat: lhs.fat + rhs.fat
+        )
+    }
+
+    func scaled(toGrams grams: Decimal) -> NutritionTotals {
+        NutritionTotals(
+            energy: energy * grams / 100,
+            protein: protein * grams / 100,
+            carbohydrates: carbohydrates * grams / 100,
+            fat: fat * grams / 100
         )
     }
 }
