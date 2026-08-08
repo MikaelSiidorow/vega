@@ -94,12 +94,62 @@ final class VegaUITests: XCTestCase {
     }
 
     @MainActor
+    func testEditsDiaryAmountAndUnit() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        let tofu = app.descendants(matching: .any)["diary-item-tofu"]
+        XCTAssertTrue(tofu.waitForExistence(timeout: 5))
+        tofu.tap()
+
+        let amount = app.textFields["diary-edit-amount"]
+        XCTAssertTrue(amount.waitForExistence(timeout: 2))
+        amount.tap()
+        amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
+        amount.typeText("150")
+
+        let unit = app.descendants(matching: .any)["diary-edit-unit"]
+        XCTAssertTrue(unit.exists)
+        unit.tap()
+        XCTAssertTrue(app.buttons["grams"].waitForExistence(timeout: 2))
+        app.buttons["grams"].tap()
+
+        XCTAssertTrue(
+            normalizedWhitespace(app.staticTexts["diary-edit-grams"].label).contains("150 g")
+        )
+        XCTAssertTrue(
+            normalizedWhitespace(app.staticTexts["diary-edit-energy"].label).contains("240 kcal")
+        )
+        let editor = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        editor.name = "Edit diary amount and unit"
+        editor.lifetime = .keepAlways
+        add(editor)
+
+        app.buttons["save-diary-entry"].tap()
+        XCTAssertTrue(amount.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(tofu.waitForExistence(timeout: 5))
+        XCTAssertTrue(tofu.label.contains("150 g"))
+
+        let result = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        result.name = "Diary after changing tofu to grams"
+        result.lifetime = .keepAlways
+        add(result)
+    }
+
+    @MainActor
     private func assertPopulatedDiary(in app: XCUIApplication) {
         let elements = app.descendants(matching: .any)
         XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
         XCTAssertTrue(elements["diary-item-oats"].exists)
         XCTAssertTrue(elements["diary-item-blueberries"].exists)
         XCTAssertTrue(elements["diary-item-tofu"].exists)
+    }
+
+    private func normalizedWhitespace(_ value: String) -> String {
+        value.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
 }

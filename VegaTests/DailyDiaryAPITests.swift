@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import WgerAPI
 
 @testable import Vega
 
@@ -97,6 +98,37 @@ nonisolated struct DailyDiaryAPITests {
         #expect(await transport.deletedEntryIDs == ["entry-id"])
     }
 
+    @Test
+    func updatesAmountAndWeightUnitThroughAuthenticatedTransport() async throws {
+        let transport = DiaryTransportStub(planPages: [:])
+        let api = DailyDiaryAPI(
+            client: DiaryAuthenticatedExecutor(),
+            transport: transport
+        )
+
+        try await api.updateDiaryEntryAmount(
+            id: "entry-id",
+            amount: "1.5",
+            weightUnitID: 31
+        )
+
+        #expect(
+            await transport.amountUpdates
+                == [DiaryAmountUpdate(id: "entry-id", amount: "1.5", weightUnitID: 31)]
+        )
+    }
+
+    @Test
+    func gramsPatchExplicitlyClearsWeightUnit() throws {
+        let patch = NutritionDiaryAmountPatch(amount: "150", weightUnit: nil)
+
+        let data = try JSONEncoder().encode(patch)
+        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        #expect(json["amount"] as? String == "150")
+        #expect(json["weight_unit"] is NSNull)
+    }
+
     private static func plan(
         _ id: String,
         start: String,
@@ -158,6 +190,7 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     private(set) var requestedIntervals: [DateInterval] = []
     private(set) var ingredientRequests: [[Int]] = []
     private(set) var deletedEntryIDs: [String] = []
+    private(set) var amountUpdates: [DiaryAmountUpdate] = []
 
     init(
         planPages: [Int: WgerPage<WgerNutritionPlan>],
@@ -210,4 +243,22 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     ) {
         deletedEntryIDs.append(id)
     }
+
+    func updateEntryAmount(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        id: String,
+        amount: String,
+        weightUnitID: Int?
+    ) {
+        amountUpdates.append(
+            DiaryAmountUpdate(id: id, amount: amount, weightUnitID: weightUnitID)
+        )
+    }
+}
+
+private nonisolated struct DiaryAmountUpdate: Equatable, Sendable {
+    let id: String
+    let amount: String
+    let weightUnitID: Int?
 }
