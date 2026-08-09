@@ -262,6 +262,133 @@ struct DiaryScreenModelTests {
         #expect(model.isCreatingEntry == false)
     }
 
+    @Test
+    func ranksRecentFoodsByTimeForToday() async throws {
+        let now = try Self.date("2026-08-06T08:00:00Z")
+        let ingredient = WgerIngredient(
+            id: 1,
+            name: "Rolled oats",
+            brand: nil,
+            energy: 370,
+            protein: "14",
+            carbohydrates: "56",
+            fat: "7",
+            weightUnits: []
+        )
+        let history = RecentDiaryPayload(
+            entries: [
+                Self.recentEntry(at: "2026-08-04T08:15:00Z"),
+                Self.recentEntry(at: "2026-08-05T07:45:00Z"),
+            ],
+            ingredients: [1: ingredient]
+        )
+        let model = DiaryScreenModel(
+            selectedDate: now,
+            calendar: Self.utcCalendar,
+            diaryFetcher: ScreenDiaryFetcher { _, _ in Self.loadedPayload },
+            diaryEntryDeleter: ScreenDiaryDeleter(),
+            diaryEntryUpdater: ScreenDiaryUpdater(),
+            recentDiaryFetcher: ScreenRecentDiaryFetcher { _, _, _ in history },
+            now: { now }
+        )
+        await model.load()
+
+        let suggestions = try await model.recentFoodSuggestions()
+
+        #expect(model.suggestedEntryDate == now)
+        #expect(suggestions.aroundThisTime.map(\.ingredient.name) == ["Rolled oats"])
+        #expect(suggestions.recent.isEmpty)
+    }
+
+    @Test
+    func pastDateUsesNoTimeContext() async throws {
+        let selectedDate = try Self.date("2026-08-05T12:00:00Z")
+        let now = try Self.date("2026-08-06T08:00:00Z")
+        let ingredient = WgerIngredient(
+            id: 1,
+            name: "Rolled oats",
+            brand: nil,
+            energy: 370,
+            protein: "14",
+            carbohydrates: "56",
+            fat: "7",
+            weightUnits: []
+        )
+        let history = RecentDiaryPayload(
+            entries: [
+                Self.recentEntry(at: "2026-08-03T12:00:00Z"),
+                Self.recentEntry(at: "2026-08-04T12:00:00Z"),
+            ],
+            ingredients: [1: ingredient]
+        )
+        let model = DiaryScreenModel(
+            selectedDate: selectedDate,
+            calendar: Self.utcCalendar,
+            diaryFetcher: ScreenDiaryFetcher { _, _ in Self.loadedPayload },
+            diaryEntryDeleter: ScreenDiaryDeleter(),
+            diaryEntryUpdater: ScreenDiaryUpdater(),
+            recentDiaryFetcher: ScreenRecentDiaryFetcher { _, _, _ in history },
+            now: { now }
+        )
+        await model.load()
+
+        let suggestions = try await model.recentFoodSuggestions()
+
+        #expect(model.suggestedEntryDate == selectedDate)
+        #expect(suggestions.aroundThisTime.isEmpty)
+        #expect(suggestions.recent.map(\.ingredient.name) == ["Rolled oats"])
+    }
+
+    @Test
+    func recentFoodFailureIsPropagatedForTheUIErrorState() async throws {
+        let date = try Self.date("2026-08-06T08:00:00Z")
+        let model = DiaryScreenModel(
+            selectedDate: date,
+            calendar: Self.utcCalendar,
+            diaryFetcher: ScreenDiaryFetcher { _, _ in Self.loadedPayload },
+            diaryEntryDeleter: ScreenDiaryDeleter(),
+            diaryEntryUpdater: ScreenDiaryUpdater(),
+            recentDiaryFetcher: ScreenRecentDiaryFetcher { _, _, _ in
+                throw ScreenDiaryError.unavailable
+            },
+            now: { date }
+        )
+        await model.load()
+
+        do {
+            _ = try await model.recentFoodSuggestions()
+            Issue.record("Expected recent food loading to fail")
+        } catch {
+            #expect(error.localizedDescription == "The diary service is unavailable.")
+        }
+    }
+
+    private static var loadedPayload: DailyDiaryPayload {
+        DailyDiaryPayload(
+            plan: WgerNutritionPlan(
+                id: "active",
+                creationDate: "2026-08-01",
+                start: "2026-08-01",
+                end: nil,
+                description: nil
+            ),
+            entries: [],
+            ingredients: [:]
+        )
+    }
+
+    private static func recentEntry(at date: String) -> WgerNutritionDiaryEntry {
+        WgerNutritionDiaryEntry(
+            id: date,
+            planID: "active",
+            mealID: nil,
+            ingredientID: 1,
+            weightUnitID: nil,
+            date: ISO8601DateFormatter().date(from: date),
+            amount: "80"
+        )
+    }
+
     private static var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -278,6 +405,18 @@ private nonisolated struct ScreenDiaryFetcher: DailyDiaryFetching {
 
     func diary(for date: Date, calendar: Calendar) async throws -> DailyDiaryPayload {
         try await response(date, calendar)
+    }
+}
+
+private nonisolated struct ScreenRecentDiaryFetcher: RecentDiaryFetching {
+    let response: @Sendable (String, Date, Calendar) async throws -> RecentDiaryPayload
+
+    func recentDiary(
+        planID: String,
+        before date: Date,
+        calendar: Calendar
+    ) async throws -> RecentDiaryPayload {
+        try await response(planID, date, calendar)
     }
 }
 
