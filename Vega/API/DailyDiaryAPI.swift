@@ -40,6 +40,21 @@ nonisolated protocol DiaryEntryUpdating: Sendable {
     ) async throws
 }
 
+nonisolated protocol IngredientSearching: Sendable {
+    func searchIngredients(query: String) async throws -> [WgerIngredient]
+}
+
+nonisolated protocol DiaryEntryCreating: Sendable {
+    func createDiaryEntry(
+        planID: String,
+        ingredientID: Int,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) async throws
+}
+
 nonisolated protocol DailyDiaryTransport: Sendable {
     func plans(
         instance: InstanceURL,
@@ -71,6 +86,19 @@ nonisolated protocol DailyDiaryTransport: Sendable {
         limit: Int,
         offset: Int
     ) async throws -> WgerPage<WgerMeal>
+
+    func searchIngredients(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        query: String,
+        limit: Int
+    ) async throws -> [WgerIngredient]
+
+    func createEntry(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        entry: NutritionDiaryEntryCreate
+    ) async throws
 
     func deleteEntry(
         instance: InstanceURL,
@@ -165,6 +193,33 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
         )
     }
 
+    func searchIngredients(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        query: String,
+        limit: Int
+    ) async throws -> [WgerIngredient] {
+        let page = try await WgerAPIModule.searchIngredientInfo(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            query: query,
+            limit: limit
+        )
+        return page.results.map(\.vegaValue)
+    }
+
+    func createEntry(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        entry: NutritionDiaryEntryCreate
+    ) async throws {
+        try await WgerAPIModule.createNutritionDiaryEntry(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            entry: entry
+        )
+    }
+
     func deleteEntry(
         instance: InstanceURL,
         session: AuthenticationSession,
@@ -200,7 +255,9 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
     }
 }
 
-actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating {
+actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
+    IngredientSearching, DiaryEntryCreating
+{
     private static let pageSize = 100
     private let client: any AuthenticatedRequestExecuting
     private let transport: any DailyDiaryTransport
@@ -290,6 +347,49 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating 
                 weightUnitID: weightUnitID,
                 date: date,
                 mealID: mealID
+            )
+        }
+    }
+
+    func searchIngredients(query: String) async throws -> [WgerIngredient] {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count >= 2 else { return [] }
+        let transport = transport
+        let ingredients = try await client.perform { instance, session in
+            try await transport.searchIngredients(
+                instance: instance,
+                session: session,
+                query: normalized,
+                limit: 25
+            )
+        }
+        for ingredient in ingredients {
+            ingredientCache[ingredient.id] = ingredient
+        }
+        return ingredients
+    }
+
+    func createDiaryEntry(
+        planID: String,
+        ingredientID: Int,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) async throws {
+        let transport = transport
+        try await client.perform { instance, session in
+            try await transport.createEntry(
+                instance: instance,
+                session: session,
+                entry: NutritionDiaryEntryCreate(
+                    plan: planID,
+                    ingredient: ingredientID,
+                    amount: amount,
+                    weightUnit: weightUnitID,
+                    datetime: date,
+                    meal: mealID
+                )
             )
         }
     }
