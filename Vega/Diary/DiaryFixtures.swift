@@ -5,11 +5,14 @@ nonisolated enum DiaryFixtureMode: Equatable, Sendable {
     case plannedMeals
 }
 
-actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating {
+actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
+    IngredientSearching, DiaryEntryCreating
+{
     let mode: DiaryFixtureMode
     private var deletedEntryIDs: Set<String> = []
     private var amountOverrides: [String: (amount: String, weightUnitID: Int?)] = [:]
     private var scheduleOverrides: [String: (date: Date, mealID: String?)] = [:]
+    private var createdEntries: [WgerNutritionDiaryEntry] = []
 
     init(mode: DiaryFixtureMode) {
         self.mode = mode
@@ -24,7 +27,7 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                 end: nil,
                 description: "Balanced nutrition"
             ),
-            entries: entries(for: date, calendar: calendar)
+            entries: (entries(for: date, calendar: calendar) + createdEntries)
                 .filter {
                     guard let id = $0.id else { return true }
                     return !deletedEntryIDs.contains(id)
@@ -45,38 +48,7 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                         amount: override.amount
                     )
                 },
-            ingredients: [
-                1: ingredient(
-                    id: 1,
-                    name: "Rolled oats",
-                    brand: "Elovena",
-                    energy: 370,
-                    protein: "14",
-                    carbohydrates: "56",
-                    fat: "7"
-                ),
-                2: ingredient(
-                    id: 2,
-                    name: "Blueberries",
-                    brand: nil,
-                    energy: 44,
-                    protein: "0.7",
-                    carbohydrates: "8.4",
-                    fat: "0.6"
-                ),
-                3: ingredient(
-                    id: 3,
-                    name: "Smoked tofu",
-                    brand: "Jalotofu",
-                    energy: 160,
-                    protein: "17",
-                    carbohydrates: "1.5",
-                    fat: "9",
-                    weightUnits: [
-                        WgerIngredientWeightUnit(id: 31, grams: 100, name: "portion")
-                    ]
-                ),
-            ],
+            ingredients: Dictionary(uniqueKeysWithValues: ingredientCatalog.map { ($0.id, $0) }),
             meals: mode == .plannedMeals
                 ? [
                     WgerMeal(
@@ -95,6 +67,92 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                     ),
                 ] : []
         )
+    }
+
+    func searchIngredients(query: String) -> [WgerIngredient] {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard normalized.count >= 2 else { return [] }
+        return ingredientCatalog.filter {
+            $0.name.lowercased().contains(normalized)
+                || $0.brand?.lowercased().contains(normalized) == true
+        }
+    }
+
+    func createDiaryEntry(
+        planID: String,
+        ingredientID: Int,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) {
+        createdEntries.append(
+            WgerNutritionDiaryEntry(
+                id: "created-\(createdEntries.count + 1)",
+                planID: planID,
+                mealID: mealID,
+                ingredientID: ingredientID,
+                weightUnitID: weightUnitID,
+                date: date,
+                amount: amount
+            )
+        )
+    }
+
+    private var ingredientCatalog: [WgerIngredient] {
+        [
+            ingredient(
+                id: 1,
+                name: "Rolled oats",
+                brand: "Elovena",
+                energy: 370,
+                protein: "14",
+                carbohydrates: "56",
+                fat: "7"
+            ),
+            ingredient(
+                id: 2,
+                name: "Blueberries",
+                brand: nil,
+                energy: 44,
+                protein: "0.7",
+                carbohydrates: "8.4",
+                fat: "0.6"
+            ),
+            ingredient(
+                id: 3,
+                name: "Smoked tofu",
+                brand: "Jalotofu",
+                energy: 160,
+                protein: "17",
+                carbohydrates: "1.5",
+                fat: "9",
+                weightUnits: [
+                    WgerIngredientWeightUnit(id: 31, grams: 100, name: "portion")
+                ]
+            ),
+            ingredient(
+                id: 4,
+                name: "Banana",
+                brand: nil,
+                energy: 89,
+                protein: "1.1",
+                carbohydrates: "22.8",
+                fat: "0.3",
+                weightUnits: [
+                    WgerIngredientWeightUnit(id: 41, grams: 118, name: "medium banana")
+                ]
+            ),
+            ingredient(
+                id: 5,
+                name: "Greek yogurt",
+                brand: "Arla",
+                energy: 73,
+                protein: "9.2",
+                carbohydrates: "3.8",
+                fat: "2.2"
+            ),
+        ]
     }
 
     func deleteDiaryEntry(id: String) {
