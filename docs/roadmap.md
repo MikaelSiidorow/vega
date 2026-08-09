@@ -12,14 +12,18 @@ against a self-hosted wger server.
 - Navigate between dates and refresh from the server.
 - Correct diary entries by deleting them, changing amount or serving unit, or
   moving them to another time or planned meal.
+- Add diary entries through ingredient search and an editable portion preview
+  that keeps amount, unit, gram equivalent, calories, and macros visible.
 - Exercise deterministic diary states in UI tests without a live account.
 
 ## Current work
 
-- Add diary entries through ingredient search and portion selection.
-- Keep amount, serving unit, gram equivalent, calories, and macros visible
-  before saving.
-- Verify the complete logging flow with deterministic UI tests and screenshots.
+- Put frequently logged portions near the current time above recent portions in
+  the add-food flow.
+- Preserve the exact amount and serving unit while keeping every suggestion
+  editable before it creates an independent diary entry.
+- Verify recent and time-aware logging with deterministic UI tests and
+  screenshots.
 
 ## Next
 
@@ -29,7 +33,7 @@ against a self-hosted wger server.
 
 ## Later, based on use
 
-- Recent, repeated, and favorite foods.
+- Repeated and favorite foods.
 - Weight tracking and trends.
 - Barcode scanning, App Intents, and widgets.
 - Last-known-data caching and offline writes; reevaluate PowerSync when the
