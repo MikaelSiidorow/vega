@@ -1,6 +1,6 @@
 import XCTest
 
-final class VegaUITests: XCTestCase {
+class VegaUITestCase: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
@@ -15,6 +15,23 @@ final class VegaUITests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
+    @MainActor
+    func assertPopulatedDiary(in app: XCUIApplication) {
+        let elements = app.descendants(matching: .any)
+        XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
+        XCTAssertTrue(elements["diary-item-oats"].exists)
+        XCTAssertTrue(elements["diary-item-blueberries"].exists)
+        XCTAssertTrue(elements["diary-item-tofu"].exists)
+    }
+
+    func normalizedWhitespace(_ value: String) -> String {
+        value.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+}
+
+final class SignInFormUITests: VegaUITestCase {
     @MainActor
     func testShowsSignInForm() throws {
         let app = XCUIApplication()
@@ -31,7 +48,9 @@ final class VegaUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
+}
 
+final class BasicLoggingDiaryUITests: VegaUITestCase {
     @MainActor
     func testShowsBasicLoggingDiary() throws {
         let app = XCUIApplication()
@@ -45,7 +64,9 @@ final class VegaUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
+}
 
+final class PlannedMealsDiaryUITests: VegaUITestCase {
     @MainActor
     func testShowsPlannedMealsDiary() throws {
         let app = XCUIApplication()
@@ -59,7 +80,9 @@ final class VegaUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
+}
 
+final class DeleteDiaryEntryUITests: VegaUITestCase {
     @MainActor
     func testDeletesDiaryEntry() throws {
         let app = XCUIApplication()
@@ -92,7 +115,9 @@ final class VegaUITests: XCTestCase {
         result.lifetime = .keepAlways
         add(result)
     }
+}
 
+final class EditDiaryAmountUITests: VegaUITestCase {
     @MainActor
     func testEditsDiaryAmountAndUnit() throws {
         let app = XCUIApplication()
@@ -136,7 +161,9 @@ final class VegaUITests: XCTestCase {
         result.lifetime = .keepAlways
         add(result)
     }
+}
 
+final class EditDiaryMealUITests: VegaUITestCase {
     @MainActor
     func testEditsDiaryMealAssignment() throws {
         let app = XCUIApplication()
@@ -173,20 +200,4 @@ final class VegaUITests: XCTestCase {
         result.lifetime = .keepAlways
         add(result)
     }
-
-    @MainActor
-    private func assertPopulatedDiary(in app: XCUIApplication) {
-        let elements = app.descendants(matching: .any)
-        XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
-        XCTAssertTrue(elements["diary-item-oats"].exists)
-        XCTAssertTrue(elements["diary-item-blueberries"].exists)
-        XCTAssertTrue(elements["diary-item-tofu"].exists)
-    }
-
-    private func normalizedWhitespace(_ value: String) -> String {
-        value.components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-    }
-
 }
