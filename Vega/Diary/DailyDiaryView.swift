@@ -46,13 +46,12 @@ struct DailyDiaryView: View {
         .task(id: model.selectedDate) {
             await model.load()
         }
-        .confirmationDialog(
+        .alert(
             "Delete \(pendingDeletion?.name ?? "entry")?",
             isPresented: Binding(
                 get: { pendingDeletion != nil },
                 set: { if !$0 { pendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
+            )
         ) {
             Button("Delete entry", role: .destructive) {
                 guard let id = pendingDeletion?.remoteID else { return }
