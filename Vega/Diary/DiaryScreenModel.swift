@@ -15,12 +15,15 @@ final class DiaryScreenModel {
     private(set) var phase: Phase = .idle
     private(set) var deletingEntryID: String?
     private(set) var updatingEntryID: String?
+    private(set) var isCreatingEntry = false
     private(set) var mutationErrorTitle: String?
     var mutationErrorMessage: String?
 
     private let diaryFetcher: any DailyDiaryFetching
     private let diaryEntryDeleter: any DiaryEntryDeleting
     private let diaryEntryUpdater: any DiaryEntryUpdating
+    private let ingredientSearcher: (any IngredientSearching)?
+    private let diaryEntryCreator: (any DiaryEntryCreating)?
     private let calendar: Calendar
     private var selectionRevision = 0
 
@@ -29,12 +32,16 @@ final class DiaryScreenModel {
         calendar: Calendar = .current,
         diaryFetcher: any DailyDiaryFetching,
         diaryEntryDeleter: any DiaryEntryDeleting,
-        diaryEntryUpdater: any DiaryEntryUpdating
+        diaryEntryUpdater: any DiaryEntryUpdating,
+        ingredientSearcher: (any IngredientSearching)? = nil,
+        diaryEntryCreator: (any DiaryEntryCreating)? = nil
     ) {
         self.calendar = calendar
         self.diaryFetcher = diaryFetcher
         self.diaryEntryDeleter = diaryEntryDeleter
         self.diaryEntryUpdater = diaryEntryUpdater
+        self.ingredientSearcher = ingredientSearcher
+        self.diaryEntryCreator = diaryEntryCreator
         self.selectedDate = calendar.startOfDay(for: selectedDate)
     }
 
@@ -133,6 +140,46 @@ final class DiaryScreenModel {
         }
     }
 
+    func searchIngredients(query: String) async throws -> [WgerIngredient] {
+        guard let ingredientSearcher else { return [] }
+        return try await ingredientSearcher.searchIngredients(query: query)
+    }
+
+    func createEntry(
+        ingredientID: Int,
+        amount: String,
+        weightUnitID: Int?,
+        date: Date,
+        mealID: String?
+    ) async -> Bool {
+        guard !isCreatingEntry, let diaryEntryCreator, let planID = diary?.planID else {
+            return false
+        }
+        isCreatingEntry = true
+        mutationErrorTitle = nil
+        mutationErrorMessage = nil
+        defer { isCreatingEntry = false }
+
+        do {
+            try await diaryEntryCreator.createDiaryEntry(
+                planID: planID,
+                ingredientID: ingredientID,
+                amount: amount,
+                weightUnitID: weightUnitID,
+                date: date,
+                mealID: mealID
+            )
+            try await reloadPreservingContent()
+            return true
+        } catch is CancellationError {
+            return false
+        } catch {
+            mutationErrorTitle = "Couldn’t add food"
+            mutationErrorMessage = Self.createMessage(for: error)
+            return false
+        }
+    }
+
     private func reloadPreservingContent() async throws {
         let requestedDate = selectedDate
         let requestedRevision = selectionRevision
@@ -170,5 +217,10 @@ final class DiaryScreenModel {
     private static func updateMessage(for error: Error) -> String {
         (error as? LocalizedError)?.errorDescription
             ?? "Vega could not update this entry. Please try again."
+    }
+
+    private static func createMessage(for error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription
+            ?? "Vega could not add this food. Please try again."
     }
 }

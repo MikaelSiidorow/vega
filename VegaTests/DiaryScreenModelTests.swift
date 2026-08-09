@@ -227,6 +227,41 @@ struct DiaryScreenModelTests {
         #expect(model.diary?.sections.contains { $0.id == .meal("dinner") } == false)
     }
 
+    @Test
+    func searchesCreatesAndReloadsANewDiaryEntry() async throws {
+        let store = FixtureDailyDiaryStore(mode: .basicLogging)
+        let model = DiaryScreenModel(
+            selectedDate: try Self.date("2026-08-05T12:00:00Z"),
+            calendar: Self.utcCalendar,
+            diaryFetcher: store,
+            diaryEntryDeleter: store,
+            diaryEntryUpdater: store,
+            ingredientSearcher: store,
+            diaryEntryCreator: store
+        )
+        await model.load()
+
+        let banana = try #require(try await model.searchIngredients(query: "banana").first)
+        let didSave = await model.createEntry(
+            ingredientID: banana.id,
+            amount: "2",
+            weightUnitID: 41,
+            date: try Self.date("2026-08-05T15:00:00Z"),
+            mealID: nil
+        )
+
+        let created = try #require(
+            model.diary?.sections.flatMap(\.items).first { $0.id == "created-1" }
+        )
+        #expect(didSave)
+        #expect(created.name == "Banana")
+        #expect(created.loggedAmount == 2)
+        #expect(created.unitName == "medium banana")
+        #expect(created.grams == 236)
+        #expect(created.nutrition.energy == Decimal(string: "210.04"))
+        #expect(model.isCreatingEntry == false)
+    }
+
     private static var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
