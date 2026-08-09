@@ -38,7 +38,7 @@ test:
 test-unit: XCODEBUILD_TEST_SELECTION := -only-testing:VegaTests -parallel-testing-enabled NO
 test-unit: test
 
-test-ui: XCODEBUILD_TEST_SELECTION := -only-testing:VegaUITests -parallel-testing-enabled YES -maximum-parallel-testing-workers 2
+test-ui: XCODEBUILD_TEST_SELECTION := -only-testing:VegaUITests -parallel-testing-enabled NO
 test-ui: test
 
 build-wger-api:
