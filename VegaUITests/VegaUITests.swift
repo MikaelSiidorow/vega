@@ -228,6 +228,12 @@ final class AddDiaryEntryUITests: VegaUITestCase {
 
         let banana = app.buttons["ingredient-result-4"]
         XCTAssertTrue(banana.waitForExistence(timeout: 5))
+
+        let searchResults = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        searchResults.name = "Ingredient search results"
+        searchResults.lifetime = .keepAlways
+        add(searchResults)
+
         banana.tap()
 
         let amount = app.textFields["diary-create-amount"]
