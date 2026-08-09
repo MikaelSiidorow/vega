@@ -29,6 +29,15 @@ class VegaUITestCase: XCTestCase {
             .filter { !$0.isEmpty }
             .joined(separator: " ")
     }
+
+    @MainActor
+    func focus(_ textField: XCUIElement, in app: XCUIApplication) {
+        textField.tap()
+        if !app.keyboards.firstMatch.waitForExistence(timeout: 2) {
+            textField.tap()
+        }
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+    }
 }
 
 final class SignInFormUITests: VegaUITestCase {
@@ -130,7 +139,7 @@ final class EditDiaryAmountUITests: VegaUITestCase {
 
         let amount = app.textFields["diary-edit-amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 2))
-        amount.tap()
+        focus(amount, in: app)
         amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
         amount.typeText("150")
 
@@ -223,7 +232,7 @@ final class AddDiaryEntryUITests: VegaUITestCase {
 
         let amount = app.textFields["diary-create-amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 2))
-        amount.tap()
+        focus(amount, in: app)
         amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
         amount.typeText("2")
 
