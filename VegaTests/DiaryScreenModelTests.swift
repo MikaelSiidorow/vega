@@ -363,7 +363,7 @@ struct DiaryScreenModelTests {
         }
     }
 
-    private static var loadedPayload: DailyDiaryPayload {
+    nonisolated private static var loadedPayload: DailyDiaryPayload {
         DailyDiaryPayload(
             plan: WgerNutritionPlan(
                 id: "active",
