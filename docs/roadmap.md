@@ -10,18 +10,19 @@ against a self-hosted wger server.
 - Load a daily nutrition diary with meal groups, unassigned-log time groups,
   serving units, calories, and macros.
 - Navigate between dates and refresh from the server.
+- Correct diary entries by deleting them, changing amount or serving unit, or
+  moving them to another time or planned meal.
 - Exercise deterministic diary states in UI tests without a live account.
 
 ## Current work
 
-- Delete diary entries with confirmation.
-- Edit amount and serving unit.
-- Move entries to another time or meal.
-- Verify correction flows with deterministic UI tests and screenshots.
+- Add diary entries through ingredient search and portion selection.
+- Keep amount, serving unit, gram equivalent, calories, and macros visible
+  before saving.
+- Verify the complete logging flow with deterministic UI tests and screenshots.
 
 ## Next
 
-- Add diary entries through ingredient search and portion selection.
 - Complete MFA challenge flows.
 - Improve accessibility, localization, decimal input, and time-zone behavior.
 - Validate the complete nutrition flow on a physical iPhone.

@@ -106,21 +106,27 @@ make format
 ```
 
 Run the formatter in lint mode, compile the app and generated API, and execute
-the unit and UI tests with:
+the unit tests with:
 
 ```sh
 make check
 ```
 
+Run the slower simulator UI tests separately with:
+
+```sh
+make test-ui
+```
+
 The test destination defaults to the latest iPhone 17 Pro simulator. Override
 `IOS_SIMULATOR_DESTINATION` when using a different installed simulator.
 
-GitHub Actions runs the same `make check` command on the standard Intel macOS 26
-runner with Xcode 26.6.
-Swift package checkouts and compatible Xcode build products are cached using the
-workspace lockfile and build configuration as the cache key. Each run keeps its
-Xcode result bundle and exported UI-test screenshots as an artifact for seven
-days.
+GitHub Actions runs `make check` on the standard Apple Silicon macOS 26 runner
+with Xcode 26.6. Adding the `run-ui-tests` label to a pull request runs the UI
+suite after the standard check and exports its screenshots. Swift package
+checkouts and compatible Xcode build products are cached between both jobs.
+Each run keeps its Xcode result bundle and exported UI-test screenshots as an
+artifact for seven days.
 
 Refresh the complete Xcode build metadata used by SourceKit-LSP:
 
