@@ -144,6 +144,47 @@ nonisolated struct DailyDiaryAPITests {
     }
 
     @Test
+    func searchesAndCreatesEntriesThroughAuthenticatedTransport() async throws {
+        let ingredient = Self.ingredient(42)
+        let transport = DiaryTransportStub(
+            planPages: [:],
+            ingredientValues: [ingredient]
+        )
+        let api = DailyDiaryAPI(
+            client: DiaryAuthenticatedExecutor(),
+            transport: transport
+        )
+
+        #expect(try await api.searchIngredients(query: "  oats ") == [ingredient])
+        #expect(await transport.searchQueries == ["oats"])
+        #expect(try await api.searchIngredients(query: "x").isEmpty)
+
+        let date = try #require(ISO8601DateFormatter().date(from: "2026-08-05T12:30:00Z"))
+        try await api.createDiaryEntry(
+            planID: "active",
+            ingredientID: 42,
+            amount: "1.5",
+            weightUnitID: 31,
+            date: date,
+            mealID: "lunch"
+        )
+
+        #expect(
+            await transport.createdEntries
+                == [
+                    NutritionDiaryEntryCreate(
+                        plan: "active",
+                        ingredient: 42,
+                        amount: "1.5",
+                        weightUnit: 31,
+                        datetime: date,
+                        meal: "lunch"
+                    )
+                ]
+        )
+    }
+
+    @Test
     func patchExplicitlyClearsWeightUnitAndMeal() throws {
         let date = try #require(ISO8601DateFormatter().date(from: "2026-08-05T12:30:00Z"))
         let patch = NutritionDiaryEntryPatch(
@@ -233,6 +274,8 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     private(set) var requestedMealPlanIDs: [String] = []
     private(set) var deletedEntryIDs: [String] = []
     private(set) var entryUpdates: [DiaryEntryUpdate] = []
+    private(set) var searchQueries: [String] = []
+    private(set) var createdEntries: [NutritionDiaryEntryCreate] = []
 
     init(
         planPages: [Int: WgerPage<WgerNutritionPlan>],
@@ -290,6 +333,24 @@ private actor DiaryTransportStub: DailyDiaryTransport {
         mealOffsets.append(offset)
         requestedMealPlanIDs.append(planID)
         return mealPages[offset] ?? WgerPage(values: [], hasNextPage: false)
+    }
+
+    func searchIngredients(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        query: String,
+        limit: Int
+    ) -> [WgerIngredient] {
+        searchQueries.append(query)
+        return ingredientValues
+    }
+
+    func createEntry(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        entry: NutritionDiaryEntryCreate
+    ) {
+        createdEntries.append(entry)
     }
 
     func deleteEntry(
