@@ -100,6 +100,50 @@ nonisolated struct DailyDiaryAPITests {
     }
 
     @Test
+    func loadsAndPaginatesSixWeeksOfRecentDiaryHistory() async throws {
+        let firstDate = try Self.date("2026-07-20T08:00:00Z")
+        let secondDate = try Self.date("2026-08-05T08:00:00Z")
+        let transport = DiaryTransportStub(
+            planPages: [:],
+            entryPages: [
+                0: WgerPage(
+                    values: [Self.entry("one", ingredientID: 12, date: firstDate)],
+                    hasNextPage: true
+                ),
+                1: WgerPage(
+                    values: [Self.entry("two", ingredientID: 34, date: secondDate)],
+                    hasNextPage: false
+                ),
+            ],
+            ingredientValues: [Self.ingredient(12), Self.ingredient(34)]
+        )
+        let api = DailyDiaryAPI(
+            client: DiaryAuthenticatedExecutor(),
+            transport: transport
+        )
+        let end = try Self.date("2026-08-06T12:00:00Z")
+
+        let result = try await api.recentDiary(
+            planID: "active",
+            before: end,
+            calendar: Self.utcCalendar
+        )
+
+        #expect(result.entries.compactMap(\.id) == ["one", "two"])
+        #expect(result.ingredients.keys.sorted() == [12, 34])
+        #expect(await transport.entryOffsets == [0, 1])
+        #expect(await transport.requestedPlanIDs == ["active", "active"])
+        #expect(await transport.ingredientRequests == [[12, 34]])
+        let requestedIntervals = await transport.requestedIntervals
+        let interval = try #require(requestedIntervals.first)
+        #expect(interval.end == end)
+        #expect(
+            Self.utcCalendar.dateComponents([.day], from: interval.start, to: interval.end).day
+                == 42
+        )
+    }
+
+    @Test
     func deletesEntryThroughAuthenticatedTransport() async throws {
         let transport = DiaryTransportStub(planPages: [:])
         let api = DailyDiaryAPI(
@@ -219,14 +263,18 @@ nonisolated struct DailyDiaryAPITests {
         )
     }
 
-    private static func entry(_ id: String, ingredientID: Int) -> WgerNutritionDiaryEntry {
+    private static func entry(
+        _ id: String,
+        ingredientID: Int,
+        date: Date? = nil
+    ) -> WgerNutritionDiaryEntry {
         WgerNutritionDiaryEntry(
             id: id,
             planID: "active",
             mealID: nil,
             ingredientID: ingredientID,
             weightUnitID: nil,
-            date: nil,
+            date: date,
             amount: "100"
         )
     }
@@ -246,6 +294,16 @@ nonisolated struct DailyDiaryAPITests {
 
     private static func meal(_ id: String, order: Int) -> WgerMeal {
         WgerMeal(id: id, planID: "active", order: order, time: nil, name: id.capitalized)
+    }
+
+    private static var utcCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }
+
+    private static func date(_ value: String) throws -> Date {
+        try #require(ISO8601DateFormatter().date(from: value))
     }
 }
 
