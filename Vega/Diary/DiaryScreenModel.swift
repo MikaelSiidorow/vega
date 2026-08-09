@@ -24,7 +24,9 @@ final class DiaryScreenModel {
     private let diaryEntryUpdater: any DiaryEntryUpdating
     private let ingredientSearcher: (any IngredientSearching)?
     private let diaryEntryCreator: (any DiaryEntryCreating)?
+    private let recentDiaryFetcher: (any RecentDiaryFetching)?
     private let calendar: Calendar
+    private let now: @Sendable () -> Date
     private var selectionRevision = 0
 
     init(
@@ -34,7 +36,9 @@ final class DiaryScreenModel {
         diaryEntryDeleter: any DiaryEntryDeleting,
         diaryEntryUpdater: any DiaryEntryUpdating,
         ingredientSearcher: (any IngredientSearching)? = nil,
-        diaryEntryCreator: (any DiaryEntryCreating)? = nil
+        diaryEntryCreator: (any DiaryEntryCreating)? = nil,
+        recentDiaryFetcher: (any RecentDiaryFetching)? = nil,
+        now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.calendar = calendar
         self.diaryFetcher = diaryFetcher
@@ -42,6 +46,8 @@ final class DiaryScreenModel {
         self.diaryEntryUpdater = diaryEntryUpdater
         self.ingredientSearcher = ingredientSearcher
         self.diaryEntryCreator = diaryEntryCreator
+        self.recentDiaryFetcher = recentDiaryFetcher
+        self.now = now
         self.selectedDate = calendar.startOfDay(for: selectedDate)
     }
 
@@ -143,6 +149,33 @@ final class DiaryScreenModel {
     func searchIngredients(query: String) async throws -> [WgerIngredient] {
         guard let ingredientSearcher else { return [] }
         return try await ingredientSearcher.searchIngredients(query: query)
+    }
+
+    var suggestedEntryDate: Date {
+        let currentDate = now()
+        if calendar.isDate(selectedDate, inSameDayAs: currentDate) {
+            return currentDate
+        }
+        return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: selectedDate)
+            ?? selectedDate
+    }
+
+    func recentFoodSuggestions() async throws -> RecentFoodSuggestions {
+        guard let recentDiaryFetcher, let planID = diary?.planID else { return .empty }
+        let currentDate = now()
+        let includesTimeContext = calendar.isDate(selectedDate, inSameDayAs: currentDate)
+        let referenceDate = suggestedEntryDate
+        let payload = try await recentDiaryFetcher.recentDiary(
+            planID: planID,
+            before: referenceDate,
+            calendar: calendar
+        )
+        return RecentFoodRanker.suggestions(
+            from: payload,
+            referenceDate: referenceDate,
+            includesTimeContext: includesTimeContext,
+            calendar: calendar
+        )
     }
 
     func createEntry(
