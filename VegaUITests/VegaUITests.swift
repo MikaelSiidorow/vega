@@ -201,3 +201,54 @@ final class EditDiaryMealUITests: VegaUITestCase {
         add(result)
     }
 }
+
+final class AddDiaryEntryUITests: VegaUITestCase {
+    @MainActor
+    func testSearchesPreviewsAndAddsIngredient() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
+        app.buttons["add-diary-entry"].tap()
+
+        let search = app.searchFields["Search ingredients"]
+        XCTAssertTrue(search.waitForExistence(timeout: 2))
+        search.tap()
+        search.typeText("banana")
+
+        let banana = app.buttons["ingredient-result-4"]
+        XCTAssertTrue(banana.waitForExistence(timeout: 5))
+        banana.tap()
+
+        let amount = app.textFields["diary-create-amount"]
+        XCTAssertTrue(amount.waitForExistence(timeout: 2))
+        amount.tap()
+        amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
+        amount.typeText("2")
+
+        XCTAssertTrue(
+            normalizedWhitespace(app.staticTexts["diary-create-grams"].label).contains("236 g")
+        )
+        XCTAssertTrue(
+            normalizedWhitespace(app.staticTexts["diary-create-energy"].label).contains("210 kcal")
+        )
+
+        let preview = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        preview.name = "Add banana portion preview"
+        preview.lifetime = .keepAlways
+        add(preview)
+
+        app.buttons["confirm-add-diary-entry"].tap()
+        XCTAssertTrue(amount.waitForNonExistence(timeout: 5))
+        let created = app.descendants(matching: .any)["diary-item-created-1"]
+        XCTAssertTrue(created.waitForExistence(timeout: 5))
+        XCTAssertTrue(created.label.contains("Banana"))
+        XCTAssertTrue(created.label.contains("236 g"))
+
+        let result = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        result.name = "Diary after adding banana"
+        result.lifetime = .keepAlways
+        add(result)
+    }
+}
