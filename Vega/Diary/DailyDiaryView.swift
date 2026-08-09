@@ -428,7 +428,7 @@ private struct DiaryEntryCreator: View {
                         .foregroundStyle(.tertiary)
                 } else {
                     Text(
-                        "Last used \(portion.lastLoggedAt, format: .relative(presentation: .named))"
+                        "Last logged \(portion.lastLoggedAt, format: .dateTime.month(.abbreviated).day())"
                     )
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
