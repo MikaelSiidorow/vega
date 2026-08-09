@@ -22,6 +22,13 @@ nonisolated struct DailyDiaryPayload: Equatable, Sendable {
     static let empty = DailyDiaryPayload(plan: nil, entries: [], ingredients: [:], meals: [])
 }
 
+nonisolated struct RecentDiaryPayload: Equatable, Sendable {
+    let entries: [WgerNutritionDiaryEntry]
+    let ingredients: [Int: WgerIngredient]
+
+    static let empty = RecentDiaryPayload(entries: [], ingredients: [:])
+}
+
 nonisolated protocol DailyDiaryFetching: Sendable {
     func diary(for date: Date, calendar: Calendar) async throws -> DailyDiaryPayload
 }
@@ -53,6 +60,14 @@ nonisolated protocol DiaryEntryCreating: Sendable {
         date: Date,
         mealID: String?
     ) async throws
+}
+
+nonisolated protocol RecentDiaryFetching: Sendable {
+    func recentDiary(
+        planID: String,
+        before date: Date,
+        calendar: Calendar
+    ) async throws -> RecentDiaryPayload
 }
 
 nonisolated protocol DailyDiaryTransport: Sendable {
@@ -256,9 +271,10 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
 }
 
 actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
-    IngredientSearching, DiaryEntryCreating
+    IngredientSearching, DiaryEntryCreating, RecentDiaryFetching
 {
     private static let pageSize = 100
+    private static let recentHistoryDays = 42
     private let client: any AuthenticatedRequestExecuting
     private let transport: any DailyDiaryTransport
     private var ingredientCache: [Int: WgerIngredient] = [:]
@@ -318,6 +334,49 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
                 ingredients: ingredients,
                 meals: meals
             )
+        }
+        ingredientCache.merge(result.ingredients) { _, latest in latest }
+        return result
+    }
+
+    func recentDiary(
+        planID: String,
+        before date: Date,
+        calendar: Calendar
+    ) async throws -> RecentDiaryPayload {
+        guard
+            let start = calendar.date(
+                byAdding: .day,
+                value: -Self.recentHistoryDays,
+                to: date
+            )
+        else { return .empty }
+
+        let cachedIngredients = ingredientCache
+        let transport = transport
+        let result = try await client.perform { instance, session in
+            let entries = try await Self.allEntries(
+                transport: transport,
+                instance: instance,
+                session: session,
+                planID: planID,
+                interval: DateInterval(start: start, end: date)
+            )
+            let missingIDs = Set(entries.map(\.ingredientID)).subtracting(
+                cachedIngredients.keys
+            )
+            var ingredients = cachedIngredients
+            for batch in missingIDs.sorted().chunks(ofCount: Self.pageSize) {
+                let hydrated = try await transport.ingredients(
+                    instance: instance,
+                    session: session,
+                    ids: batch
+                )
+                for ingredient in hydrated {
+                    ingredients[ingredient.id] = ingredient
+                }
+            }
+            return RecentDiaryPayload(entries: entries, ingredients: ingredients)
         }
         ingredientCache.merge(result.ingredients) { _, latest in latest }
         return result
