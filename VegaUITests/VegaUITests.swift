@@ -213,6 +213,61 @@ final class EditDiaryMealUITests: VegaUITestCase {
 
 final class AddDiaryEntryUITests: VegaUITestCase {
     @MainActor
+    func testRelogsARecentPortionWithItsSavedUnit() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
+        app.buttons["add-diary-entry"].tap()
+
+        let suggestions = app.descendants(matching: .any)["recent-food-suggestions"]
+        XCTAssertTrue(suggestions.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Around this time"].exists)
+        XCTAssertTrue(app.staticTexts["Recent"].exists)
+
+        let tofu = app.buttons["recent-food-3-31-2"]
+        XCTAssertTrue(tofu.exists)
+        XCTAssertTrue(normalizedWhitespace(tofu.label).contains("2 × portion = 200 g"))
+
+        Thread.sleep(forTimeInterval: 5)
+        let recentFoods = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        recentFoods.name = "Recent food suggestions"
+        recentFoods.lifetime = .keepAlways
+        add(recentFoods)
+
+        tofu.tap()
+
+        let amount = app.textFields["diary-create-amount"]
+        XCTAssertTrue(amount.waitForExistence(timeout: 2))
+        XCTAssertEqual(amount.value as? String, "2")
+        XCTAssertTrue(
+            normalizedWhitespace(app.staticTexts["diary-create-grams"].label).contains("200 g")
+        )
+        XCTAssertTrue(
+            normalizedWhitespace(app.staticTexts["diary-create-energy"].label).contains("320 kcal")
+        )
+
+        let preview = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        preview.name = "Recent tofu portion preview"
+        preview.lifetime = .keepAlways
+        add(preview)
+
+        app.buttons["confirm-add-diary-entry"].tap()
+        XCTAssertTrue(amount.waitForNonExistence(timeout: 5))
+        let created = app.descendants(matching: .any)["diary-item-created-1"]
+        XCTAssertTrue(created.waitForExistence(timeout: 5))
+        XCTAssertTrue(created.label.contains("Smoked tofu"))
+        XCTAssertTrue(created.label.contains("200 g"))
+        XCTAssertTrue(app.descendants(matching: .any)["diary-item-tofu"].exists)
+
+        let result = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        result.name = "Diary after relogging tofu"
+        result.lifetime = .keepAlways
+        add(result)
+    }
+
+    @MainActor
     func testSearchesPreviewsAndAddsIngredient() throws {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
