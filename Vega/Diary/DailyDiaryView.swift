@@ -102,8 +102,9 @@ struct DailyDiaryView: View {
         .sheet(isPresented: $showsEntryCreator) {
             DiaryEntryCreator(
                 meals: model.diary?.meals ?? [],
-                selectedDate: model.selectedDate,
-                search: model.searchIngredients
+                initialDate: model.suggestedEntryDate,
+                search: model.searchIngredients,
+                loadSuggestions: model.recentFoodSuggestions
             ) { ingredient, amount, weightUnitID, date, mealID in
                 await model.createEntry(
                     ingredientID: ingredient.id,
@@ -232,35 +233,35 @@ struct DailyDiaryView: View {
 private struct DiaryEntryCreator: View {
     let meals: [DiaryMeal]
     let search: (String) async throws -> [WgerIngredient]
+    let loadSuggestions: () async throws -> RecentFoodSuggestions
     let save: (WgerIngredient, String, Int?, Date, String?) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var results: [WgerIngredient] = []
+    @State private var suggestions = RecentFoodSuggestions.empty
     @State private var selectedIngredient: WgerIngredient?
     @State private var amount = "100"
     @State private var weightUnitID: Int?
     @State private var date: Date
     @State private var mealID: String?
     @State private var isSearching = false
+    @State private var isLoadingSuggestions = true
     @State private var isSaving = false
     @State private var searchError: String?
+    @State private var suggestionError: String?
 
     init(
         meals: [DiaryMeal],
-        selectedDate: Date,
+        initialDate: Date,
         search: @escaping (String) async throws -> [WgerIngredient],
+        loadSuggestions: @escaping () async throws -> RecentFoodSuggestions,
         save: @escaping (WgerIngredient, String, Int?, Date, String?) async -> Bool
     ) {
         self.meals = meals
         self.search = search
+        self.loadSuggestions = loadSuggestions
         self.save = save
-        let calendar = Calendar.current
-        let initialDate =
-            calendar.isDateInToday(selectedDate)
-            ? Date()
-            : calendar.date(bySettingHour: 12, minute: 0, second: 0, of: selectedDate)
-                ?? selectedDate
         _date = State(initialValue: initialDate)
     }
 
@@ -301,6 +302,9 @@ private struct DiaryEntryCreator: View {
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
+            .task {
+                await loadRecentFoods()
+            }
         }
     }
 
@@ -315,19 +319,13 @@ private struct DiaryEntryCreator: View {
                     description: Text(searchError)
                 )
             } else if query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
-                ContentUnavailableView(
-                    "Find an ingredient",
-                    systemImage: "magnifyingglass",
-                    description: Text("Search by food, product, or brand.")
-                )
+                recentFoodResults
             } else if results.isEmpty {
                 ContentUnavailableView.search(text: query)
             } else {
                 List(results, id: \.id) { ingredient in
                     Button {
-                        selectedIngredient = ingredient
-                        amount = ingredient.weightUnits.isEmpty ? "100" : "1"
-                        weightUnitID = ingredient.weightUnits.first?.id
+                        selectSearchResult(ingredient)
                     } label: {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(ingredient.name)
@@ -368,6 +366,118 @@ private struct DiaryEntryCreator: View {
                     (error as? LocalizedError)?.errorDescription
                     ?? "Vega could not search this server. Please try again."
             }
+        }
+    }
+
+    @ViewBuilder
+    private var recentFoodResults: some View {
+        if isLoadingSuggestions {
+            ProgressView("Loading recent foods…")
+        } else if let suggestionError {
+            ContentUnavailableView {
+                Label("Couldn’t load recent foods", systemImage: "clock.arrow.circlepath")
+            } description: {
+                Text(suggestionError)
+            } actions: {
+                Button("Try again") {
+                    Task { await loadRecentFoods() }
+                }
+            }
+        } else if suggestions.aroundThisTime.isEmpty && suggestions.recent.isEmpty {
+            ContentUnavailableView(
+                "No recent foods",
+                systemImage: "clock",
+                description: Text("Search for an ingredient to start building your history.")
+            )
+        } else {
+            List {
+                if !suggestions.aroundThisTime.isEmpty {
+                    Section("Around this time") {
+                        ForEach(suggestions.aroundThisTime) { portion in
+                            recentFoodButton(portion)
+                        }
+                    }
+                }
+                if !suggestions.recent.isEmpty {
+                    Section("Recent") {
+                        ForEach(suggestions.recent) { portion in
+                            recentFoodButton(portion)
+                        }
+                    }
+                }
+            }
+            .accessibilityIdentifier("recent-food-suggestions")
+        }
+    }
+
+    private func recentFoodButton(_ portion: RecentFoodPortion) -> some View {
+        Button {
+            selectedIngredient = portion.ingredient
+            amount = portion.amount
+            weightUnitID = portion.weightUnitID
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(portion.ingredient.name)
+                    .foregroundStyle(.primary)
+                Text(portionDescription(portion))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if portion.matchingTimeCount >= 2 {
+                    Text("Logged \(portion.matchingTimeCount) times around this time")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else {
+                    Text(
+                        "Last used \(portion.lastLoggedAt, format: .relative(presentation: .named))"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .accessibilityIdentifier(
+            "recent-food-\(portion.id.ingredientID)-\(portion.id.weightUnitID ?? 0)-\(portion.id.amount)"
+        )
+    }
+
+    private func portionDescription(_ portion: RecentFoodPortion) -> String {
+        guard
+            let unit = portion.ingredient.weightUnits.first(where: {
+                $0.id == portion.weightUnitID
+            })
+        else {
+            return "\(portion.amount) g"
+        }
+        guard
+            let amount = Decimal(
+                string: portion.amount,
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+        else { return "\(portion.amount) × \(unit.name)" }
+        let grams = amount * Decimal(unit.grams)
+        let formattedGrams = grams.formatted(.number.precision(.fractionLength(0...2)))
+        return "\(portion.amount) × \(unit.name) = \(formattedGrams) g"
+    }
+
+    private func selectSearchResult(_ ingredient: WgerIngredient) {
+        selectedIngredient = ingredient
+        amount = ingredient.weightUnits.isEmpty ? "100" : "1"
+        weightUnitID = ingredient.weightUnits.first?.id
+    }
+
+    private func loadRecentFoods() async {
+        isLoadingSuggestions = true
+        defer { isLoadingSuggestions = false }
+        do {
+            suggestions = try await loadSuggestions()
+            suggestionError = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            suggestions = .empty
+            suggestionError =
+                (error as? LocalizedError)?.errorDescription
+                ?? "Vega could not load your food history. You can still search for an ingredient."
         }
     }
 

@@ -22,6 +22,7 @@ struct ContentView: View {
         let authenticatedClient = AuthenticatedAPIClient(sessionCoordinator: sessionCoordinator)
         var fixtureCalendar = Calendar(identifier: .gregorian)
         fixtureCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let fixtureNow = Date(timeIntervalSince1970: 1_785_931_200)
 
         showsDiaryFixture = fixtureMode != nil
         _model = State(
@@ -31,13 +32,15 @@ struct ContentView: View {
             let diaryStore = FixtureDailyDiaryStore(mode: fixtureMode)
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
-                    selectedDate: Date(timeIntervalSince1970: 1_785_888_000),
+                    selectedDate: fixtureNow,
                     calendar: fixtureCalendar,
                     diaryFetcher: diaryStore,
                     diaryEntryDeleter: diaryStore,
                     diaryEntryUpdater: diaryStore,
                     ingredientSearcher: diaryStore,
-                    diaryEntryCreator: diaryStore
+                    diaryEntryCreator: diaryStore,
+                    recentDiaryFetcher: diaryStore,
+                    now: { fixtureNow }
                 )
             )
         } else {
@@ -48,7 +51,8 @@ struct ContentView: View {
                     diaryEntryDeleter: diaryAPI,
                     diaryEntryUpdater: diaryAPI,
                     ingredientSearcher: diaryAPI,
-                    diaryEntryCreator: diaryAPI
+                    diaryEntryCreator: diaryAPI,
+                    recentDiaryFetcher: diaryAPI
                 )
             )
         }

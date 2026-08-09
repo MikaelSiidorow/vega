@@ -6,7 +6,7 @@ nonisolated enum DiaryFixtureMode: Equatable, Sendable {
 }
 
 actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
-    IngredientSearching, DiaryEntryCreating
+    IngredientSearching, DiaryEntryCreating, RecentDiaryFetching
 {
     let mode: DiaryFixtureMode
     private var deletedEntryIDs: Set<String> = []
@@ -76,6 +76,118 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
             $0.name.lowercased().contains(normalized)
                 || $0.brand?.lowercased().contains(normalized) == true
         }
+    }
+
+    func recentDiary(
+        planID: String,
+        before date: Date,
+        calendar: Calendar
+    ) -> RecentDiaryPayload {
+        let history = [
+            historicalEntry(
+                id: "recent-tofu-1",
+                ingredientID: 3,
+                amount: "2",
+                weightUnitID: 31,
+                daysAgo: 1,
+                hour: 12,
+                minute: 10,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-tofu-2",
+                ingredientID: 3,
+                amount: "2",
+                weightUnitID: 31,
+                daysAgo: 2,
+                hour: 11,
+                minute: 45,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-tofu-3",
+                ingredientID: 3,
+                amount: "2",
+                weightUnitID: 31,
+                daysAgo: 5,
+                hour: 13,
+                minute: 0,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-banana-1",
+                ingredientID: 4,
+                amount: "1",
+                weightUnitID: 41,
+                daysAgo: 1,
+                hour: 12,
+                minute: 30,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-banana-2",
+                ingredientID: 4,
+                amount: "1",
+                weightUnitID: 41,
+                daysAgo: 3,
+                hour: 12,
+                minute: 20,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-oats-1",
+                ingredientID: 1,
+                amount: "80",
+                weightUnitID: nil,
+                daysAgo: 1,
+                hour: 8,
+                minute: 0,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-oats-2",
+                ingredientID: 1,
+                amount: "80",
+                weightUnitID: nil,
+                daysAgo: 2,
+                hour: 8,
+                minute: 5,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-tofu-grams",
+                ingredientID: 3,
+                amount: "150",
+                weightUnitID: nil,
+                daysAgo: 2,
+                hour: 18,
+                minute: 0,
+                before: date,
+                calendar: calendar
+            ),
+            historicalEntry(
+                id: "recent-yogurt",
+                ingredientID: 5,
+                amount: "200",
+                weightUnitID: nil,
+                daysAgo: 4,
+                hour: 15,
+                minute: 0,
+                before: date,
+                calendar: calendar
+            ),
+        ]
+        return RecentDiaryPayload(
+            entries: history,
+            ingredients: Dictionary(uniqueKeysWithValues: ingredientCatalog.map { ($0.id, $0) })
+        )
     }
 
     func createDiaryEntry(
@@ -224,6 +336,28 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
         calendar: Calendar
     ) -> Date {
         calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
+    }
+
+    private func historicalEntry(
+        id: String,
+        ingredientID: Int,
+        amount: String,
+        weightUnitID: Int?,
+        daysAgo: Int,
+        hour: Int,
+        minute: Int,
+        before date: Date,
+        calendar: Calendar
+    ) -> WgerNutritionDiaryEntry {
+        let day = calendar.date(byAdding: .day, value: -daysAgo, to: date) ?? date
+        return entry(
+            id: id,
+            mealID: nil,
+            ingredientID: ingredientID,
+            amount: amount,
+            weightUnitID: weightUnitID,
+            date: timestamp(atHour: hour, minute: minute, on: day, calendar: calendar)
+        )
     }
 
     private func ingredient(
