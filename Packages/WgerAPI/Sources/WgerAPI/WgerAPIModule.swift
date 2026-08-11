@@ -52,6 +52,24 @@ public enum WgerAPIModule {
         return try response.value()
     }
 
+    /// Returns the nutrients supplied by the foods scheduled in one plan.
+    public static func nutritionPlanValues(
+        serverURL: URL,
+        accessToken: String,
+        planID: String
+    ) async throws -> Components.Schemas.NutritionalValues {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.nutritionplanNutritionalValuesRetrieve(
+            path: .init(id: planID)
+        )
+        switch response {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
     /// Returns one page of diary entries in a half-open time range.
     public static func nutritionDiary(
         serverURL: URL,
