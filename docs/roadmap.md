@@ -16,14 +16,14 @@ against a self-hosted wger server.
   moving them to another time or planned meal.
 - Add diary entries through ingredient search and an editable portion preview
   that keeps amount, unit, gram equivalent, calories, and macros visible.
+- Scan EAN, UPC, and GTIN product barcodes with the native camera, or enter a
+  code manually, and send it through the server's ingredient search.
 - Put frequently logged portions near the current time above recent portions
   while preserving their saved amount and serving unit.
 - Exercise deterministic diary states in UI tests without a live account.
 
 ## Current work
 
-- Add native EAN, UPC, and GTIN barcode scanning with a manual-code fallback,
-  then reuse the existing ingredient search and portion-preview flow.
 - Add server-backed API contract tests so generated Swift models are exercised
   against real wger serializers and deterministic edge-case data.
 
