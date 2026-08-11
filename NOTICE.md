@@ -27,9 +27,9 @@ conditions.
 
 ## Relationship to wger
 
-Vega is an independently implemented, unofficial client compatible with
-[wger](https://wger.de). It is not affiliated with or endorsed by the wger
-project, and it uses its own name, interface, and application identity.
+Vega is an unofficial native client compatible with [wger](https://wger.de).
+It is not affiliated with or endorsed by the wger project, and it uses its own
+name, interface, and application identity.
 
 The following projects provided the API contract and product inspiration:
 
@@ -46,6 +46,16 @@ The normalization keeps JSON request bodies and omits unsupported upload
 mutations and their request-only schemas. The original wger project and these
 schema-derived files are available under the GNU Affero General Public License
 version 3 or later.
+
+Vega's focused workout sequence in `Vega/Workout/WorkoutSession.swift` and
+`Vega/Workout/WorkoutSessionView.swift` adapts the start, current-set, rest, and
+summary interaction model from the official wger Flutter client's
+`lib/features/routines/widgets/gym_mode` directory at revision
+`6eb6197923517a64487697d138caf60ea17216ef`. The native SwiftUI implementation
+and state model differ from the Flutter source. The adapted work is copyright
+© 2020–2026 wger Team and remains available under AGPL-3.0-or-later with the
+wger app-store exception; Vega's complete corresponding source is provided in
+this repository under compatible terms.
 
 Vega does not bundle wger's exercise, ingredient, or image catalogs. Content
 fetched from a configured server may carry its own attribution and Creative
