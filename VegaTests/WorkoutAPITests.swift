@@ -23,6 +23,8 @@ nonisolated struct WorkoutAPITests {
             ],
             days: [42: [Self.day]],
             exercises: [WorkoutExerciseRecord(id: 123, name: "Bench press")],
+            weightUnits: [WorkoutWeightUnitRecord(id: 1, name: "kg")],
+            repetitionUnits: [WorkoutRepetitionUnitRecord(id: 1, name: "Repetitions")],
             logPages: [
                 0: WgerPage(
                     values: [Self.log],
@@ -37,8 +39,11 @@ nonisolated struct WorkoutAPITests {
 
         #expect(dashboard.routines.map(\.name) == ["Strength"])
         #expect(dashboard.today?.name == "Upper body")
+        #expect(dashboard.today?.date == Self.workoutDate)
         #expect(dashboard.today?.exercises.first?.name == "Bench press")
         #expect(dashboard.logs == [Self.log])
+        #expect(dashboard.weightUnits.map(\.name) == ["kg"])
+        #expect(dashboard.repetitionUnits.map(\.name) == ["Repetitions"])
         #expect(await transport.routineOffsets == [0])
         #expect(await transport.requestedRoutineIDs == [42])
         #expect(await transport.exerciseRequests == [[123]])
@@ -58,6 +63,9 @@ nonisolated struct WorkoutAPITests {
             targetWeight: "60",
             repetitionsUnitID: 1,
             weightUnitID: 1,
+            repetitionsIncrement: 1,
+            weightIncrement: 2.5,
+            restSeconds: 120,
             prescription: "3 × 8 × 60 kg",
             comment: nil
         )
@@ -66,7 +74,7 @@ nonisolated struct WorkoutAPITests {
             routineName: "Strength",
             dayID: 3,
             name: "Upper body",
-            date: "2026-08-12",
+            date: Self.workoutDate,
             iteration: 2,
             isRest: false,
             exercises: [plan]
@@ -104,6 +112,9 @@ nonisolated struct WorkoutAPITests {
                 targetWeight: "60",
                 repetitionsUnitID: 1,
                 weightUnitID: 1,
+                repetitionsIncrement: "1.00",
+                weightIncrement: "2.50",
+                rest: "120",
                 prescription: "3 × 8 × 60 kg",
                 comment: ""
             )
@@ -118,8 +129,12 @@ nonisolated struct WorkoutAPITests {
         slotEntryID: 7,
         exerciseID: 123,
         repetitions: "8",
-        weight: "60"
+        weight: "60",
+        repetitionsUnitID: 1,
+        weightUnitID: 1
     )
+
+    private static let workoutDate = Date(timeIntervalSince1970: 1_786_492_800)
 
     private static var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -143,6 +158,8 @@ private actor WorkoutTransportStub: WorkoutTransport {
     let routinePages: [Int: WgerPage<WorkoutRoutineRecord>]
     let days: [Int: [WorkoutDayRecord]]
     let exercisesValue: [WorkoutExerciseRecord]
+    let weightUnitValues: [WorkoutWeightUnitRecord]
+    let repetitionUnitValues: [WorkoutRepetitionUnitRecord]
     let logPages: [Int: WgerPage<WorkoutSetLog>]
     private(set) var routineOffsets: [Int] = []
     private(set) var requestedRoutineIDs: [Int] = []
@@ -156,11 +173,15 @@ private actor WorkoutTransportStub: WorkoutTransport {
         routinePages: [Int: WgerPage<WorkoutRoutineRecord>],
         days: [Int: [WorkoutDayRecord]] = [:],
         exercises: [WorkoutExerciseRecord] = [],
+        weightUnits: [WorkoutWeightUnitRecord] = [],
+        repetitionUnits: [WorkoutRepetitionUnitRecord] = [],
         logPages: [Int: WgerPage<WorkoutSetLog>] = [:]
     ) {
         self.routinePages = routinePages
         self.days = days
         exercisesValue = exercises
+        weightUnitValues = weightUnits
+        repetitionUnitValues = repetitionUnits
         self.logPages = logPages
     }
 
@@ -190,6 +211,24 @@ private actor WorkoutTransportStub: WorkoutTransport {
     ) -> [WorkoutExerciseRecord] {
         exerciseRequests.append(ids)
         return exercisesValue.filter { ids.contains($0.id) }
+    }
+
+    func weightUnits(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        limit: Int,
+        offset: Int
+    ) -> WgerPage<WorkoutWeightUnitRecord> {
+        WgerPage(values: offset == 0 ? weightUnitValues : [], hasNextPage: false)
+    }
+
+    func repetitionUnits(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        limit: Int,
+        offset: Int
+    ) -> WgerPage<WorkoutRepetitionUnitRecord> {
+        WgerPage(values: offset == 0 ? repetitionUnitValues : [], hasNextPage: false)
     }
 
     func logs(

@@ -51,7 +51,9 @@ struct WeightHistoryView: View {
                 entry: nil,
                 initialDate: model.suggestedDate
             ) { date, weight in
-                await model.create(date: date, weight: weight)
+                let didCreate = await model.create(date: date, weight: weight)
+                if didCreate { showsCreator = false }
+                return didCreate
             }
         }
         .sheet(item: $editingEntry) { entry in
@@ -60,7 +62,9 @@ struct WeightHistoryView: View {
                 entry: entry,
                 initialDate: model.suggestedDate
             ) { date, weight in
-                await model.update(id: entry.id, date: date, weight: weight)
+                let didUpdate = await model.update(id: entry.id, date: date, weight: weight)
+                if didUpdate { editingEntry = nil }
+                return didUpdate
             }
         }
         .alert(
@@ -315,7 +319,7 @@ private struct WeightEntryForm: View {
                     Button("Save") {
                         isSaving = true
                         Task {
-                            if await save(date, weight) { dismiss() }
+                            _ = await save(date, weight)
                             isSaving = false
                         }
                     }
