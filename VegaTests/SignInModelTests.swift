@@ -49,6 +49,107 @@ struct SignInModelTests {
     }
 
     @Test
+    func completesMFAAndPersistsSession() async throws {
+        let challenge = MFAChallenge(
+            sessionToken: "mfa-session",
+            methods: ["totp", "recovery_codes"]
+        )
+        let credentialStore = InMemorySessionCredentialStore()
+        let model = SignInModel(
+            authenticationClient: StubAuthenticationClient(
+                result: .failure(.mfaRequired(challenge)),
+                mfaResult: .success(
+                    AuthenticationSession(accessToken: "access", refreshToken: "refresh")
+                )
+            ),
+            connectionChecker: StubConnectionChecker(result: .success(1)),
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(result: .failure(.expiredSession)),
+                credentialStore: credentialStore
+            )
+        )
+        model.instanceAddress = "wger.example"
+        model.username = "test-user"
+        model.password = "secret"
+
+        await model.signIn()
+
+        #expect(model.pendingMFAChallenge == challenge)
+        #expect(model.password.isEmpty)
+        #expect(model.connectedAccount == nil)
+
+        model.mfaCode = "123456"
+        await model.verifyMFA()
+
+        #expect(model.pendingMFAChallenge == nil)
+        #expect(model.mfaCode.isEmpty)
+        #expect(model.connectedAccount?.nutritionPlanCount == 1)
+        #expect(
+            await credentialStore.session
+                == StoredSession(
+                    instanceAddress: "https://wger.example/",
+                    refreshToken: "refresh"
+                )
+        )
+    }
+
+    @Test
+    func rejectedMFACodeKeepsChallengeOpen() async {
+        let challenge = MFAChallenge(sessionToken: "mfa-session", methods: ["totp"])
+        let model = SignInModel(
+            authenticationClient: StubAuthenticationClient(
+                result: .failure(.mfaRequired(challenge)),
+                mfaResult: .failure(.invalidMFACode("Incorrect code."))
+            )
+        )
+        model.instanceAddress = "wger.example"
+        model.username = "test-user"
+        model.password = "secret"
+
+        await model.signIn()
+        model.mfaCode = "000000"
+        await model.verifyMFA()
+
+        #expect(model.pendingMFAChallenge == challenge)
+        #expect(model.errorMessage == "Incorrect code.")
+    }
+
+    @Test
+    func completesWebSignInFromValidatedCallback() async throws {
+        let credentialStore = InMemorySessionCredentialStore()
+        let model = SignInModel(
+            authenticationClient: StubAuthenticationClient(result: .failure(.expiredSession)),
+            webSessionRefresher: StubSessionRefresher(
+                result: .success(
+                    AuthenticationSession(accessToken: "access", refreshToken: "rotated")
+                )
+            ),
+            connectionChecker: StubConnectionChecker(result: .success(1)),
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(result: .failure(.expiredSession)),
+                credentialStore: credentialStore
+            )
+        )
+        model.instanceAddress = "wger.example"
+        let request = try model.makeWebAuthenticationRequest()
+        let callback = try #require(
+            URL(string: "wger://app-auth#token=issued-refresh&state=\(request.state)")
+        )
+
+        await model.completeWebSignIn(request: request, callbackURL: callback)
+
+        #expect(model.connectedAccount?.nutritionPlanCount == 1)
+        #expect(model.errorMessage == nil)
+        #expect(
+            await credentialStore.session
+                == StoredSession(
+                    instanceAddress: "https://wger.example/",
+                    refreshToken: "rotated"
+                )
+        )
+    }
+
+    @Test
     func restoresAndRotatesSavedSession() async throws {
         let credentialStore = InMemorySessionCredentialStore(
             session: StoredSession(
@@ -172,6 +273,15 @@ struct SignInModelTests {
 
 private nonisolated struct StubAuthenticationClient: AuthenticationClient {
     let result: Result<AuthenticationSession, AuthenticationError>
+    let mfaResult: Result<AuthenticationSession, AuthenticationError>?
+
+    init(
+        result: Result<AuthenticationSession, AuthenticationError>,
+        mfaResult: Result<AuthenticationSession, AuthenticationError>? = nil
+    ) {
+        self.result = result
+        self.mfaResult = mfaResult
+    }
 
     func signIn(
         instance: InstanceURL,
@@ -186,7 +296,7 @@ private nonisolated struct StubAuthenticationClient: AuthenticationClient {
         challenge: MFAChallenge,
         code: String
     ) async throws -> AuthenticationSession {
-        try result.get()
+        try (mfaResult ?? result).get()
     }
 }
 

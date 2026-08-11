@@ -57,12 +57,19 @@ nonisolated struct MFAChallenge: Equatable, Sendable {
     let methods: [String]
 }
 
+nonisolated struct WebAuthenticationRequest: Equatable, Sendable {
+    let instance: InstanceURL
+    let url: URL
+    let state: String
+}
+
 nonisolated enum AuthenticationError: Error, Equatable, Sendable {
     case invalidInstanceURL
     case invalidCredentials(String?)
     case mfaRequired(MFAChallenge)
     case invalidMFACode(String?)
     case expiredMFAChallenge
+    case invalidWebAuthenticationCallback
     case rateLimited(retryAfter: String?)
     case malformedResponse
     case expiredSession
@@ -83,6 +90,8 @@ extension AuthenticationError: LocalizedError {
             return message ?? "The verification code was not accepted."
         case .expiredMFAChallenge:
             return "This verification attempt has expired. Sign in again."
+        case .invalidWebAuthenticationCallback:
+            return "The web sign-in response could not be verified. Please try again."
         case .rateLimited(let retryAfter):
             if let retryAfter {
                 return "Too many sign-in attempts. Try again after \(retryAfter)."
@@ -139,6 +148,40 @@ nonisolated protocol SessionRefreshing: Sendable {
         instance: InstanceURL,
         refreshToken: String
     ) async throws -> AuthenticationSession
+}
+
+nonisolated enum WebAuthenticationHandoff {
+    static func makeRequest(instance: InstanceURL) -> WebAuthenticationRequest {
+        let state = (UUID().uuidString + UUID().uuidString)
+            .replacingOccurrences(of: "-", with: "")
+            .lowercased()
+        var components = URLComponents(
+            url: instance.appending(path: "user/app-auth/"),
+            resolvingAgainstBaseURL: false
+        )!
+        components.queryItems = [URLQueryItem(name: "state", value: state)]
+        return WebAuthenticationRequest(instance: instance, url: components.url!, state: state)
+    }
+
+    static func refreshToken(
+        from callbackURL: URL,
+        expectedState: String
+    ) throws -> String {
+        guard callbackURL.scheme == "wger", callbackURL.host() == "app-auth",
+            let encodedFragment = URLComponents(
+                url: callbackURL,
+                resolvingAgainstBaseURL: false
+            )?.percentEncodedFragment,
+            let fragment = URLComponents(string: "https://callback.invalid/?\(encodedFragment)"),
+            let state = fragment.queryItems?.first(where: { $0.name == "state" })?.value,
+            state == expectedState,
+            let token = fragment.queryItems?.first(where: { $0.name == "token" })?.value,
+            !token.isEmpty
+        else {
+            throw AuthenticationError.invalidWebAuthenticationCallback
+        }
+        return token
+    }
 }
 
 nonisolated struct AllauthClient: AuthenticationClient, SessionRefreshing {

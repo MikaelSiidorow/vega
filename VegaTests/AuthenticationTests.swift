@@ -50,6 +50,43 @@ nonisolated struct AuthenticationTests {
     }
 
     @Test
+    func validatesWebAuthenticationHandoff() throws {
+        let instance = try InstanceURL("https://wger.example")
+        let request = WebAuthenticationHandoff.makeRequest(instance: instance)
+
+        #expect(request.url.host() == "wger.example")
+        #expect(request.url.path == "/user/app-auth/")
+        #expect(
+            URLComponents(url: request.url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "state" })?.value == request.state
+        )
+
+        let callback = try #require(
+            URL(string: "wger://app-auth#token=refresh%2Etoken&state=\(request.state)")
+        )
+        #expect(
+            try WebAuthenticationHandoff.refreshToken(
+                from: callback,
+                expectedState: request.state
+            ) == "refresh.token"
+        )
+    }
+
+    @Test
+    func rejectsWebAuthenticationHandoffWithWrongState() throws {
+        let callback = try #require(
+            URL(string: "wger://app-auth#token=refresh-token&state=unexpected")
+        )
+
+        #expect(throws: AuthenticationError.invalidWebAuthenticationCallback) {
+            try WebAuthenticationHandoff.refreshToken(
+                from: callback,
+                expectedState: "expected"
+            )
+        }
+    }
+
+    @Test
     func reportsInvalidCredentials() async throws {
         let client = AllauthClient(
             transport: StubHTTPTransport { _ in
