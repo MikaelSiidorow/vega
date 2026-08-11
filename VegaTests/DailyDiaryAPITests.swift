@@ -60,12 +60,24 @@ nonisolated struct DailyDiaryAPITests {
         #expect(result.entries.compactMap(\.id) == ["one", "two", "three"])
         #expect(result.ingredients.keys.sorted() == [12, 34])
         #expect(result.meals.map(\.id) == ["breakfast", "dinner"])
+        #expect(
+            result.plannedNutrition
+                == .available(
+                    WgerNutritionalValues(
+                        energy: 2_000,
+                        protein: 120,
+                        carbohydrates: 250,
+                        fat: 70
+                    )
+                )
+        )
         #expect(await transport.planOffsets == [0, 2])
         #expect(await transport.entryOffsets == [0, 1])
         #expect(await transport.requestedPlanIDs == ["active", "active"])
         #expect(await transport.ingredientRequests == [[12, 34]])
         #expect(await transport.mealOffsets == [0, 1])
         #expect(await transport.requestedMealPlanIDs == ["active", "active"])
+        #expect(await transport.requestedNutritionPlanIDs == ["active"])
 
         let requestedIntervals = await transport.requestedIntervals
         let bounds = try #require(requestedIntervals.first)
@@ -74,6 +86,22 @@ nonisolated struct DailyDiaryAPITests {
 
         _ = try await api.diary(for: date, calendar: calendar)
         #expect(await transport.ingredientRequests == [[12, 34]])
+    }
+
+    @Test
+    func keepsDiaryAvailableWhenPlannedNutritionFails() async throws {
+        let transport = DiaryTransportStub(
+            planPages: [
+                0: WgerPage(values: [Self.plan("active", start: "2026-01-01")], hasNextPage: false)
+            ],
+            nutritionValuesShouldFail: true
+        )
+        let api = DailyDiaryAPI(client: DiaryAuthenticatedExecutor(), transport: transport)
+
+        let result = try await api.diary(for: Date(), calendar: Calendar.current)
+
+        #expect(result.plan?.id == "active")
+        #expect(result.plannedNutrition == .unavailable)
     }
 
     @Test
@@ -324,6 +352,8 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     private let entryPages: [Int: WgerPage<WgerNutritionDiaryEntry>]
     private let mealPages: [Int: WgerPage<WgerMeal>]
     private let ingredientValues: [WgerIngredient]
+    private let nutritionValues: WgerNutritionalValues
+    private let nutritionValuesShouldFail: Bool
     private(set) var planOffsets: [Int] = []
     private(set) var entryOffsets: [Int] = []
     private(set) var requestedPlanIDs: [String] = []
@@ -331,6 +361,7 @@ private actor DiaryTransportStub: DailyDiaryTransport {
     private(set) var ingredientRequests: [[Int]] = []
     private(set) var mealOffsets: [Int] = []
     private(set) var requestedMealPlanIDs: [String] = []
+    private(set) var requestedNutritionPlanIDs: [String] = []
     private(set) var deletedEntryIDs: [String] = []
     private(set) var entryUpdates: [DiaryEntryUpdate] = []
     private(set) var searchQueries: [String] = []
@@ -340,12 +371,31 @@ private actor DiaryTransportStub: DailyDiaryTransport {
         planPages: [Int: WgerPage<WgerNutritionPlan>],
         entryPages: [Int: WgerPage<WgerNutritionDiaryEntry>] = [:],
         mealPages: [Int: WgerPage<WgerMeal>] = [:],
-        ingredientValues: [WgerIngredient] = []
+        ingredientValues: [WgerIngredient] = [],
+        nutritionValues: WgerNutritionalValues = WgerNutritionalValues(
+            energy: 2_000,
+            protein: 120,
+            carbohydrates: 250,
+            fat: 70
+        ),
+        nutritionValuesShouldFail: Bool = false
     ) {
         self.planPages = planPages
         self.entryPages = entryPages
         self.mealPages = mealPages
         self.ingredientValues = ingredientValues
+        self.nutritionValues = nutritionValues
+        self.nutritionValuesShouldFail = nutritionValuesShouldFail
+    }
+
+    func nutritionPlanValues(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String
+    ) throws -> WgerNutritionalValues {
+        requestedNutritionPlanIDs.append(planID)
+        if nutritionValuesShouldFail { throw DiaryTransportError.unavailable }
+        return nutritionValues
     }
 
     func plans(
@@ -439,6 +489,10 @@ private actor DiaryTransportStub: DailyDiaryTransport {
             )
         )
     }
+}
+
+private enum DiaryTransportError: Error {
+    case unavailable
 }
 
 private nonisolated struct DiaryEntryUpdate: Equatable, Sendable {
