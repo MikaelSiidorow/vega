@@ -38,6 +38,59 @@ class VegaUITestCase: XCTestCase {
         }
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
     }
+
+    @MainActor
+    func replaceText(
+        _ replacement: String,
+        in textField: XCUIElement,
+        using app: XCUIApplication,
+        placeholder: String
+    ) {
+        let keyboard = app.keyboards.firstMatch
+        var current = textFieldText(textField, placeholder: placeholder)
+        while !current.isEmpty {
+            let expected = String(current.dropLast())
+            keyboard.keys["Delete"].tap()
+            XCTAssertTrue(waitForText(expected, in: textField, placeholder: placeholder))
+            current = expected
+        }
+
+        for character in replacement {
+            let expected = current + String(character)
+            keyboard.keys[String(character)].tap()
+            XCTAssertTrue(waitForText(expected, in: textField, placeholder: placeholder))
+            current = expected
+        }
+    }
+
+    @MainActor
+    private func waitForText(
+        _ expected: String,
+        in textField: XCUIElement,
+        placeholder: String
+    ) -> Bool {
+        let predicate = NSPredicate { object, _ in
+            guard let element = object as? XCUIElement else { return false }
+            let value = element.value as? String ?? ""
+            let text = value == placeholder ? "" : value
+            return text == expected
+        }
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: textField)
+        return XCTWaiter.wait(for: [expectation], timeout: 2) == .completed
+    }
+
+    @MainActor
+    private func textFieldText(_ textField: XCUIElement, placeholder: String) -> String {
+        let value = textField.value as? String ?? ""
+        return value == placeholder ? "" : value
+    }
+
+    func capture(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }
 
 final class SignInFormUITests: VegaUITestCase {
@@ -307,7 +360,7 @@ final class AddDiaryEntryUITests: VegaUITestCase {
 
         let search = app.searchFields["Search ingredients"]
         XCTAssertTrue(search.waitForExistence(timeout: 2))
-        search.tap()
+        focus(search, in: app)
         search.typeText("banana")
 
         let banana = app.buttons["ingredient-result-4"]
@@ -443,5 +496,72 @@ final class BarcodeScannerUITests: VegaUITestCase {
         XCTAssertTrue(app.buttons["submit-manual-barcode"].isEnabled)
         app.buttons["submit-manual-barcode"].tap()
         XCTAssertTrue(app.buttons["ingredient-result-4"].waitForExistence(timeout: 5))
+    }
+}
+
+final class WeightHistoryUITests: VegaUITestCase {
+    @MainActor
+    func testShowsLatestWeightAndTimeRanges() throws {
+        let app = launchWeightFixture()
+
+        XCTAssertTrue(app.descendants(matching: .any)["latest-weight"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["weight-chart"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["weight-entry-14"].exists)
+        capture("Weight history")
+
+        app.buttons["All"].tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["latest-weight"].label.contains("-4.5 kg")
+        )
+        capture("All-time weight trend")
+    }
+
+    @MainActor
+    func testAddsEditsAndDeletesWeight() throws {
+        let app = launchWeightFixture()
+
+        app.buttons["add-weight-entry"].tap()
+        let input = app.textFields["weight-input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 2))
+        focus(input, in: app)
+        replaceText("79.4", in: input, using: app, placeholder: "Weight")
+        XCTAssertTrue(app.buttons["save-weight-entry"].isEnabled)
+        capture("Add weight entry")
+        app.buttons["save-weight-entry"].tap()
+
+        let created = app.descendants(matching: .any)["weight-entry-15"]
+        XCTAssertTrue(created.waitForExistence(timeout: 5))
+        XCTAssertTrue(created.label.contains("79.4 kg"))
+        capture("Weight history after adding")
+
+        created.tap()
+        XCTAssertTrue(input.waitForExistence(timeout: 2))
+        focus(input, in: app)
+        replaceText("79.2", in: input, using: app, placeholder: "Weight")
+        capture("Edit weight entry")
+        app.buttons["save-weight-entry"].tap()
+        XCTAssertTrue(created.waitForExistence(timeout: 5))
+        XCTAssertTrue(created.label.contains("79.2 kg"))
+        capture("Weight history after editing")
+
+        created.swipeLeft()
+        XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 2))
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(app.buttons["Delete entry"].waitForExistence(timeout: 2))
+        capture("Delete weight entry confirmation")
+        app.buttons["Delete entry"].tap()
+        XCTAssertTrue(created.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["weight-entry-14"].exists)
+        capture("Weight history after deleting")
+    }
+
+    @MainActor
+    private func launchWeightFixture() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Weight"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Weight"].tap()
+        return app
     }
 }

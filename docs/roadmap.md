@@ -20,6 +20,8 @@ against a self-hosted wger server.
   code manually, and send it through the server's ingredient search.
 - Put frequently logged portions near the current time above recent portions
   while preserving their saved amount and serving unit.
+- Track body-weight measurements in kilograms, correct or remove entries, and
+  review native trend charts over 30 days, 90 days, one year, or all time.
 - Exercise deterministic diary states in UI tests without a live account.
 
 ## Current work
@@ -29,7 +31,6 @@ against a self-hosted wger server.
 
 ## Next
 
-- Track daily body weight and show useful trends over time.
 - Browse exercises and workout plans, then record sets, repetitions, and weight.
 - Improve accessibility, localization, decimal input, and time-zone behavior.
 
