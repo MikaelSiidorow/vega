@@ -52,6 +52,43 @@ public enum WgerAPIModule {
         return try response.value()
     }
 
+    /// Returns one page of the signed-in user's non-template workout routines.
+    public static func routines(
+        serverURL: URL,
+        accessToken: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedRoutineList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.routineList(
+            query: .init(
+                isTemplate: false,
+                limit: limit,
+                offset: offset,
+                ordering: "-start,-created"
+            )
+        )
+        return try response.value()
+    }
+
+    /// Returns the server-resolved workout sequence, including set targets.
+    public static func workoutDayPlans(
+        serverURL: URL,
+        accessToken: String,
+        routineID: Int
+    ) async throws -> [Components.Schemas.WorkoutDayPlan] {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.routineDateSequenceGymRetrieve(
+            path: .init(id: routineID)
+        )
+        switch response {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
     /// Returns the nutrients supplied by the foods scheduled in one plan.
     public static func nutritionPlanValues(
         serverURL: URL,
@@ -404,6 +441,17 @@ public struct NutritionDiaryEntryPatch: Encodable, Equatable, Sendable {
 
 extension Operations.NutritionplanList.Output {
     fileprivate func value() throws -> Components.Schemas.PaginatedNutritionPlanList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.RoutineList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedRoutineList {
         switch self {
         case .ok(let response):
             return try response.body.json
