@@ -15,6 +15,22 @@ output_schema="$2"
 # omit only the affected write operations and their request-only schemas. Read
 # and delete operations remain generated.
 jq '
+    .components.schemas.IngredientThumbnails = {
+        "type": "object",
+        "description": "Thumbnail URLs generated for an ingredient image.",
+        "properties": {
+            "small": {"type": "string", "format": "uri"},
+            "medium": {"type": "string", "format": "uri"}
+        },
+        "required": ["small", "medium"]
+    }
+    | .components.schemas.IngredientInfo.properties.image.nullable = true
+    | .components.schemas.IngredientInfo.properties.thumbnails = {
+        "allOf": [{"$ref": "#/components/schemas/IngredientThumbnails"}],
+        "nullable": true,
+        "readOnly": true
+    }
+    |
     del(
         .paths["/api/v2/exerciseimage/"].post,
         .paths["/api/v2/exerciseimage/{id}/"].put,
@@ -45,6 +61,18 @@ jq '
         end
     )
 ' "$source_schema" > "$output_schema"
+
+# The serializer explicitly returns null when an ingredient has no usable
+# image. Older wger schemas documented both values as non-null (and thumbnails
+# as a string), so keep the generated contract aligned with the actual API.
+if ! jq -e '
+    .components.schemas.IngredientInfo.properties.image.nullable == true
+    and .components.schemas.IngredientInfo.properties.thumbnails.nullable == true
+    and .components.schemas.IngredientThumbnails.required == ["small", "medium"]
+' "$output_schema" >/dev/null; then
+    echo "Ingredient image nullability normalization failed" >&2
+    exit 1
+fi
 
 if ! jq -e '
     [
