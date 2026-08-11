@@ -44,6 +44,16 @@ nonisolated struct WgerIngredientWeightUnit: Equatable, Sendable {
     let name: String
 }
 
+nonisolated struct WgerWeightEntry: Equatable, Identifiable, Sendable {
+    let id: Int
+    let date: Date
+    let weight: Decimal
+}
+
+nonisolated enum WgerModelError: Error, Equatable, Sendable {
+    case invalidWeight(String)
+}
+
 nonisolated struct WgerPage<Value: Sendable>: Sendable {
     let values: [Value]
     let hasNextPage: Bool
@@ -97,5 +107,17 @@ extension Components.Schemas.IngredientInfo {
                 WgerIngredientWeightUnit(id: $0.id, grams: $0.gram, name: $0.name)
             }
         )
+    }
+}
+
+extension Components.Schemas.WeightEntry {
+    nonisolated var vegaValue: WgerWeightEntry {
+        get throws {
+            guard let weight = Decimal(string: weight, locale: Locale(identifier: "en_US_POSIX"))
+            else {
+                throw WgerModelError.invalidWeight(self.weight)
+            }
+            return WgerWeightEntry(id: id, date: date, weight: weight)
+        }
     }
 }
