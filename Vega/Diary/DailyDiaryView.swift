@@ -154,20 +154,21 @@ struct DailyDiaryView: View {
 
     @ViewBuilder
     private func diaryContent(_ diary: DailyDiary) -> some View {
-        if diary.sections.isEmpty {
-            ContentUnavailableView(
-                "Nothing logged",
-                systemImage: "fork.knife",
-                description: Text("This day has no nutrition diary entries.")
-            )
-        } else {
-            List {
-                Section {
-                    NutritionSummary(totals: diary.totals)
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                }
+        List {
+            Section {
+                NutritionSummary(totals: diary.totals, goal: diary.nutritionGoal)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
 
+            if diary.sections.isEmpty {
+                ContentUnavailableView(
+                    "Nothing logged",
+                    systemImage: "fork.knife",
+                    description: Text("This day has no nutrition diary entries.")
+                )
+                .listRowBackground(Color.clear)
+            } else {
                 ForEach(Array(diary.sections.enumerated()), id: \.element.id) { index, section in
                     Section(sectionTitle(section, index: index, diary: diary)) {
                         ForEach(section.items) { item in
@@ -195,10 +196,10 @@ struct DailyDiaryView: View {
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .refreshable {
-                await model.load()
-            }
+        }
+        .listStyle(.insetGrouped)
+        .refreshable {
+            await model.load()
         }
     }
 
@@ -791,16 +792,31 @@ private struct DiaryEntryEditor: View {
 
 private struct NutritionSummary: View {
     let totals: NutritionTotals
+    let goal: NutritionGoalState
+
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Daily total")
-                .font(.headline)
-            HStack(spacing: 0) {
-                nutrient("Energy", value: totals.energy, unit: "kcal")
-                nutrient("Protein", value: totals.protein, unit: "g")
-                nutrient("Carbs", value: totals.carbohydrates, unit: "g")
-                nutrient("Fat", value: totals.fat, unit: "g")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Daily progress")
+                    .font(.headline)
+                Spacer()
+                Text(goalDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("nutrition-goal-source")
+            }
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
+                nutrient("Energy", value: totals.energy, target: targets?.energy, unit: "kcal")
+                nutrient("Protein", value: totals.protein, target: targets?.protein, unit: "g")
+                nutrient(
+                    "Carbs",
+                    value: totals.carbohydrates,
+                    target: targets?.carbohydrates,
+                    unit: "g"
+                )
+                nutrient("Fat", value: totals.fat, target: targets?.fat, unit: "g")
             }
         }
         .padding()
@@ -810,19 +826,81 @@ private struct NutritionSummary: View {
         .accessibilityIdentifier("nutrition-summary")
     }
 
-    private func nutrient(_ name: String, value: Decimal, unit: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value, format: .number.precision(.fractionLength(0...1)))
-                .font(.headline.monospacedDigit())
-            Text(unit)
+    private var targets: NutritionTargets? {
+        guard case .available(let targets, _) = goal else { return nil }
+        return targets
+    }
+
+    private var goalDescription: String {
+        switch goal {
+        case .missingPlan:
+            "No nutrition plan"
+        case .available(_, .configured):
+            "Configured goals"
+        case .available(_, .plannedMeals):
+            "Planned meals"
+        case .unavailable:
+            "Targets unavailable"
+        }
+    }
+
+    private func nutrient(
+        _ name: String,
+        value: Decimal,
+        target: Decimal?,
+        unit: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(name)
+                    .font(.caption.weight(.medium))
+                Spacer(minLength: 4)
+                Text(value, format: .number.precision(.fractionLength(0...1)))
+                    .font(.caption.monospacedDigit())
+                if let target {
+                    Text("/ \(target.formatted(.number.precision(.fractionLength(0...1)))) \(unit)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(unit)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            ProgressView(value: progress(value: value, target: target))
+                .tint(progressTint(value: value, target: target))
+            Text(status(value: value, target: target, unit: unit))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text(name)
-                .font(.caption)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(name), \(value.formatted()) \(unit)")
+        .accessibilityIdentifier("nutrition-goal-\(name.lowercased())")
+        .accessibilityLabel(
+            "\(name), \(value.formatted()) \(unit), \(status(value: value, target: target, unit: unit))"
+        )
+    }
+
+    private func progress(value: Decimal, target: Decimal?) -> Double {
+        guard let target else { return 0 }
+        guard target > 0 else { return value > 0 ? 1 : 0 }
+        return min(1, NSDecimalNumber(decimal: value / target).doubleValue)
+    }
+
+    private func progressTint(value: Decimal, target: Decimal?) -> Color {
+        guard let target, value > target else { return .accentColor }
+        return .orange
+    }
+
+    private func status(value: Decimal, target: Decimal?, unit: String) -> String {
+        guard let target else { return "No target set" }
+        let difference = target - value
+        if difference >= 0 {
+            return
+                "\(difference.formatted(.number.precision(.fractionLength(0...1)))) \(unit) remaining"
+        }
+        return "\((-difference).formatted(.number.precision(.fractionLength(0...1)))) \(unit) over"
     }
 }
 
