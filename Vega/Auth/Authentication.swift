@@ -61,6 +61,8 @@ nonisolated enum AuthenticationError: Error, Equatable, Sendable {
     case invalidInstanceURL
     case invalidCredentials(String?)
     case mfaRequired(MFAChallenge)
+    case invalidMFACode(String?)
+    case expiredMFAChallenge
     case rateLimited(retryAfter: String?)
     case malformedResponse
     case expiredSession
@@ -76,8 +78,11 @@ extension AuthenticationError: LocalizedError {
         case .invalidCredentials(let message):
             return message ?? "The username or password was not accepted."
         case .mfaRequired:
-            return
-                "This account requires multi-factor authentication. MFA support is the next milestone."
+            return "Enter a code to finish signing in."
+        case .invalidMFACode(let message):
+            return message ?? "The verification code was not accepted."
+        case .expiredMFAChallenge:
+            return "This verification attempt has expired. Sign in again."
         case .rateLimited(let retryAfter):
             if let retryAfter {
                 return "Too many sign-in attempts. Try again after \(retryAfter)."
@@ -120,6 +125,12 @@ nonisolated protocol AuthenticationClient: Sendable {
         instance: InstanceURL,
         username: String,
         password: String
+    ) async throws -> AuthenticationSession
+
+    func completeMFA(
+        instance: InstanceURL,
+        challenge: MFAChallenge,
+        code: String
     ) async throws -> AuthenticationSession
 }
 
@@ -187,6 +198,56 @@ nonisolated struct AllauthClient: AuthenticationClient, SessionRefreshing {
         }
     }
 
+    func completeMFA(
+        instance: InstanceURL,
+        challenge: MFAChallenge,
+        code: String
+    ) async throws -> AuthenticationSession {
+        var request = URLRequest(
+            url: instance.appending(path: "allauth/app/v1/auth/2fa/authenticate")
+        )
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(challenge.sessionToken, forHTTPHeaderField: "X-Session-Token")
+        request.httpBody = try encoder.encode(MFARequest(code: code))
+
+        let data: Data
+        let response: HTTPURLResponse
+        do {
+            (data, response) = try await transport.data(for: request)
+        } catch let error as AuthenticationError {
+            throw error
+        } catch {
+            throw AuthenticationError.network
+        }
+
+        let envelope = try? decoder.decode(LoginEnvelope.self, from: data)
+        switch response.statusCode {
+        case 200...299:
+            guard let accessToken = envelope?.meta?.accessToken, !accessToken.isEmpty else {
+                throw AuthenticationError.malformedResponse
+            }
+            return AuthenticationSession(
+                accessToken: accessToken,
+                refreshToken: envelope?.meta?.refreshToken
+            )
+        case 400:
+            throw AuthenticationError.invalidMFACode(envelope?.firstErrorMessage)
+        case 401:
+            throw AuthenticationError.expiredMFAChallenge
+        case 429:
+            throw AuthenticationError.rateLimited(
+                retryAfter: response.value(forHTTPHeaderField: "Retry-After")
+            )
+        default:
+            throw AuthenticationError.unexpectedStatus(
+                response.statusCode,
+                envelope?.firstErrorMessage
+            )
+        }
+    }
+
     func refresh(
         instance: InstanceURL,
         refreshToken: String
@@ -239,6 +300,10 @@ nonisolated struct AllauthClient: AuthenticationClient, SessionRefreshing {
 private nonisolated struct LoginRequest: Encodable {
     let username: String
     let password: String
+}
+
+private nonisolated struct MFARequest: Encodable {
+    let code: String
 }
 
 private nonisolated struct RefreshRequest: Encodable {

@@ -98,6 +98,62 @@ nonisolated struct AuthenticationTests {
     }
 
     @Test
+    func completesPendingMFAChallenge() async throws {
+        let recorder = RequestRecorder()
+        let client = AllauthClient(
+            transport: StubHTTPTransport { request in
+                await recorder.record(request)
+                return try response(
+                    status: 200,
+                    body: #"{"meta":{"access_token":"access","refresh_token":"refresh"}}"#
+                )
+            }
+        )
+        let challenge = MFAChallenge(
+            sessionToken: "mfa-session",
+            methods: ["totp", "recovery_codes"]
+        )
+
+        let session = try await client.completeMFA(
+            instance: InstanceURL("https://wger.example"),
+            challenge: challenge,
+            code: "123456"
+        )
+
+        #expect(session == AuthenticationSession(accessToken: "access", refreshToken: "refresh"))
+        let request = try #require(await recorder.request)
+        #expect(
+            request.url?.absoluteString
+                == "https://wger.example/allauth/app/v1/auth/2fa/authenticate"
+        )
+        #expect(request.value(forHTTPHeaderField: "X-Session-Token") == "mfa-session")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+        let body = try #require(request.httpBody)
+        let payload = try JSONSerialization.jsonObject(with: body) as? [String: String]
+        #expect(payload?["code"] == "123456")
+    }
+
+    @Test
+    func reportsRejectedMFACode() async throws {
+        let client = AllauthClient(
+            transport: StubHTTPTransport { _ in
+                try response(
+                    status: 400,
+                    body: #"{"errors":[{"message":"Incorrect code."}]}"#
+                )
+            }
+        )
+
+        await #expect(throws: AuthenticationError.invalidMFACode("Incorrect code.")) {
+            try await client.completeMFA(
+                instance: InstanceURL("https://wger.example"),
+                challenge: MFAChallenge(sessionToken: "mfa-session", methods: ["totp"]),
+                code: "000000"
+            )
+        }
+    }
+
+    @Test
     func reportsRateLimitRetryAfter() async throws {
         let client = AllauthClient(
             transport: StubHTTPTransport { _ in

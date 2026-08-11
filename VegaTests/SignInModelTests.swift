@@ -180,6 +180,14 @@ private nonisolated struct StubAuthenticationClient: AuthenticationClient {
     ) async throws -> AuthenticationSession {
         try result.get()
     }
+
+    func completeMFA(
+        instance: InstanceURL,
+        challenge: MFAChallenge,
+        code: String
+    ) async throws -> AuthenticationSession {
+        try result.get()
+    }
 }
 
 private nonisolated struct StubSessionRefresher: SessionRefreshing {
