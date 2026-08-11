@@ -569,8 +569,38 @@ final class WeightHistoryUITests: VegaUITestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
         app.launch()
-        XCTAssertTrue(app.tabBars.buttons["Weight"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Weight"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Progress"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Progress"].tap()
         return app
+    }
+}
+
+final class AppShellUITests: VegaUITestCase {
+    @MainActor
+    func testNavigatesBetweenPrimaryDestinationsWithoutLosingDiary() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        XCTAssertTrue(app.tabBars.buttons["Diary"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["diary-item-oats"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Workouts"].tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["workouts-placeholder"].waitForExistence(timeout: 2)
+        )
+        XCTAssertTrue(app.buttons["Account"].exists)
+        capture("Workouts tab")
+
+        app.tabBars.buttons["Progress"].tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["weight-history"].waitForExistence(timeout: 5))
+        capture("Progress tab")
+
+        app.tabBars.buttons["Diary"].tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["diary-item-oats"].waitForExistence(timeout: 2))
+        capture("Diary tab after navigation")
     }
 }
