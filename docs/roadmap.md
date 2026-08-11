@@ -11,6 +11,8 @@ against a self-hosted wger server.
 - Persist and refresh sessions securely through Keychain.
 - Load a daily nutrition diary with meal groups, unassigned-log time groups,
   serving units, calories, and macros.
+- Compare consumed energy, protein, carbohydrates, and fat with configured
+  nutrition goals or the foods scheduled in the active plan.
 - Navigate between dates and refresh from the server.
 - Correct diary entries by deleting them, changing amount or serving unit, or
   moving them to another time or planned meal.
@@ -22,16 +24,16 @@ against a self-hosted wger server.
   while preserving their saved amount and serving unit.
 - Track body-weight measurements in kilograms, correct or remove entries, and
   review native trend charts over 30 days, 90 days, one year, or all time.
+- Move between native Diary, Workouts, and Progress destinations while keeping
+  each screen's state.
+- Browse workout routines and their server-resolved training days, then record,
+  correct, or delete today's sets with repetitions and weight.
 - Exercise deterministic diary states in UI tests without a live account.
-
-## Current work
-
-- Add server-backed API contract tests so generated Swift models are exercised
-  against real wger serializers and deterministic edge-case data.
 
 ## Next
 
-- Browse exercises and workout plans, then record sets, repetitions, and weight.
+- Add workout sessions, rest timers, and richer exercise details.
+- Expand generated API contract fixtures as more server surfaces are adopted.
 - Improve accessibility, localization, decimal input, and time-zone behavior.
 
 ## Later, based on use

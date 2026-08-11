@@ -11,12 +11,12 @@ See the short [roadmap](docs/roadmap.md) for current and planned work.
 
 ## Relationship to wger
 
-Vega is independently implemented against wger's documented HTTP API; it is
-not a fork or port of either the
-[wger server](https://github.com/wger-project/wger) or its
-[official Flutter client](https://github.com/wger-project/flutter). Both projects
-informed Vega's API integration and product direction, and both are licensed
-under the GNU Affero General Public License.
+Vega is a native SwiftUI client built against wger's documented HTTP API. Most
+of the implementation is original Swift code; selected interaction patterns,
+including the focused workout sequence, are adapted from the
+[official wger Flutter client](https://github.com/wger-project/flutter). The
+[wger server](https://github.com/wger-project/wger), Flutter client, and Vega
+are licensed under the GNU Affero General Public License.
 
 The checked-in OpenAPI snapshots originate from a wger 2.6 server and are
 mechanically normalized for Apple's Swift OpenAPI Generator. Vega does not
@@ -106,9 +106,11 @@ normal build from a fresh clone.
 `refresh-wger-schema` rejects schemas that do not report wger 2.6.0. It keeps
 the verbatim server response in `server-openapi.json` and derives
 `openapi.json` for Apple's generator. The derivation keeps JSON request bodies
-and omits unsupported image/video upload mutations and their seven request-only
-schemas. Their read and delete operations remain available. Generated Swift
-files are build artifacts and are not committed.
+and aligns known serializer mismatches for nullable ingredient images,
+nutrition-plan values, and resolved workout-day sequences. It also omits
+unsupported image/video upload mutations and their seven request-only schemas.
+Their read and delete operations remain available. Generated Swift files are
+build artifacts and are not committed.
 
 Format the handwritten Swift sources with:
 
