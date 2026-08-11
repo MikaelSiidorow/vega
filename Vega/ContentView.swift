@@ -31,6 +31,7 @@ struct ContentView: View {
         var fixtureCalendar = Calendar(identifier: .gregorian)
         fixtureCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let fixtureNow = Date(timeIntervalSince1970: 1_785_931_200)
+        let weightFixtureNow = Date(timeIntervalSince1970: 1_786_449_600)
 
         showsDiaryFixture = fixtureMode != nil
         if arguments.contains("-uiTestBarcodeScannerUnavailableFixture") {
@@ -77,7 +78,7 @@ struct ContentView: View {
                     entryUpdater: weightStore,
                     entryDeleter: weightStore,
                     calendar: fixtureCalendar,
-                    now: { fixtureNow }
+                    now: { weightFixtureNow }
                 )
             )
         } else {
