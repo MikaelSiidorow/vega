@@ -127,6 +127,10 @@ final class DeleteDiaryEntryUITests: VegaUITestCase {
         XCTAssertTrue(blueberries.waitForExistence(timeout: 5))
         blueberries.swipeLeft()
         XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 2))
+        let action = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        action.name = "Delete diary entry swipe action"
+        action.lifetime = .keepAlways
+        add(action)
         app.buttons["Delete"].tap()
 
         XCTAssertTrue(app.buttons["Delete entry"].waitForExistence(timeout: 2))
