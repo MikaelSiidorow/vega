@@ -317,7 +317,10 @@ private struct DiaryEntryCreator: View {
                 await loadRecentFoods()
             }
             .sheet(isPresented: $showsBarcodeScanner) {
-                BarcodeScannerView(mode: barcodeScannerMode) { barcode in
+                BarcodeScannerView(
+                    mode: barcodeScannerMode,
+                    onCancel: { showsBarcodeScanner = false }
+                ) { barcode in
                     query = barcode.value
                     results = []
                     searchError = nil

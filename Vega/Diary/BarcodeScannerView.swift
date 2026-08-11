@@ -21,9 +21,9 @@ extension EnvironmentValues {
 
 struct BarcodeScannerView: View {
     let mode: BarcodeScannerMode
+    let onCancel: () -> Void
     let onScan: (ProductBarcode) -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @State private var phase = CameraPhase.checking
     @State private var manualCode = ""
     @State private var scannerMessage: String?
@@ -48,7 +48,7 @@ struct BarcodeScannerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel", action: onCancel)
                         .accessibilityIdentifier("cancel-barcode-scanner")
                 }
             }
@@ -174,7 +174,6 @@ struct BarcodeScannerView: View {
                 Button("Search for product") {
                     guard let barcode = ProductBarcode(manualCode) else { return }
                     onScan(barcode)
-                    dismiss()
                 }
                 .disabled(ProductBarcode(manualCode) == nil)
                 .accessibilityIdentifier("submit-manual-barcode")
@@ -222,7 +221,6 @@ struct BarcodeScannerView: View {
             return
         }
         onScan(barcode)
-        dismiss()
     }
 }
 
