@@ -247,11 +247,13 @@ private struct DiaryEntryCreator: View {
     @State private var weightUnitID: Int?
     @State private var date: Date
     @State private var mealID: String?
+    @State private var showsBarcodeScanner = false
     @State private var isSearching = false
     @State private var isLoadingSuggestions = true
     @State private var isSaving = false
     @State private var searchError: String?
     @State private var suggestionError: String?
+    @Environment(\.barcodeScannerMode) private var barcodeScannerMode
 
     init(
         meals: [DiaryMeal],
@@ -295,6 +297,13 @@ private struct DiaryEntryCreator: View {
                             .disabled(normalizedAmount == nil || isSaving)
                             .accessibilityIdentifier("confirm-add-diary-entry")
                     }
+                } else {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Scan barcode", systemImage: "barcode.viewfinder") {
+                            showsBarcodeScanner = true
+                        }
+                        .accessibilityIdentifier("scan-barcode")
+                    }
                 }
             }
             .overlay {
@@ -306,6 +315,14 @@ private struct DiaryEntryCreator: View {
             }
             .task {
                 await loadRecentFoods()
+            }
+            .sheet(isPresented: $showsBarcodeScanner) {
+                BarcodeScannerView(mode: barcodeScannerMode) { barcode in
+                    query = barcode.value
+                    results = []
+                    searchError = nil
+                    showsBarcodeScanner = false
+                }
             }
         }
     }
