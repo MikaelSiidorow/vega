@@ -25,7 +25,11 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                 creationDate: "2026-08-01",
                 start: "2026-08-01",
                 end: nil,
-                description: "Balanced nutrition"
+                description: "Balanced nutrition",
+                goalEnergy: mode == .basicLogging ? 2_000 : nil,
+                goalProtein: mode == .basicLogging ? 120 : nil,
+                goalCarbohydrates: mode == .basicLogging ? 250 : nil,
+                goalFat: mode == .basicLogging ? 70 : nil
             ),
             entries: (entries(for: date, calendar: calendar) + createdEntries)
                 .filter {
@@ -65,7 +69,15 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
                         time: "18:00:00",
                         name: "Dinner"
                     ),
-                ] : []
+                ] : [],
+            plannedNutrition: .available(
+                WgerNutritionalValues(
+                    energy: 1_850,
+                    protein: 110,
+                    carbohydrates: 220,
+                    fat: 65
+                )
+            )
         )
     }
 

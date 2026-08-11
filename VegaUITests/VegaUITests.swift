@@ -19,6 +19,8 @@ class VegaUITestCase: XCTestCase {
     func assertPopulatedDiary(in app: XCUIApplication) {
         let elements = app.descendants(matching: .any)
         XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
+        XCTAssertTrue(elements["nutrition-goal-energy"].exists)
+        XCTAssertTrue(elements["nutrition-goal-protein"].exists)
         XCTAssertTrue(elements["diary-item-oats"].exists)
         XCTAssertTrue(elements["diary-item-blueberries"].exists)
         XCTAssertTrue(elements["diary-item-tofu"].exists)
@@ -145,6 +147,7 @@ final class BasicLoggingDiaryUITests: VegaUITestCase {
         app.launch()
 
         assertPopulatedDiary(in: app)
+        XCTAssertTrue(app.staticTexts["Configured goals"].exists)
 
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Basic logging diary"
@@ -161,6 +164,7 @@ final class PlannedMealsDiaryUITests: VegaUITestCase {
         app.launch()
 
         assertPopulatedDiary(in: app)
+        XCTAssertTrue(app.staticTexts["Planned meals"].exists)
 
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Planned meals diary"
