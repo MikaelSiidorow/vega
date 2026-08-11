@@ -168,19 +168,29 @@ nonisolated enum WebAuthenticationHandoff {
         expectedState: String
     ) throws -> String {
         guard callbackURL.scheme == "wger", callbackURL.host() == "app-auth",
-            let encodedFragment = URLComponents(
+            let fragment = URLComponents(
                 url: callbackURL,
                 resolvingAgainstBaseURL: false
             )?.percentEncodedFragment,
-            let fragment = URLComponents(string: "https://callback.invalid/?\(encodedFragment)"),
-            let state = fragment.queryItems?.first(where: { $0.name == "state" })?.value,
+            let state = fragmentValue(named: "state", in: fragment),
             state == expectedState,
-            let token = fragment.queryItems?.first(where: { $0.name == "token" })?.value,
+            let token = fragmentValue(named: "token", in: fragment),
             !token.isEmpty
         else {
             throw AuthenticationError.invalidWebAuthenticationCallback
         }
         return token
+    }
+
+    private static func fragmentValue(named name: String, in fragment: String) -> String? {
+        for pair in fragment.split(separator: "&") {
+            guard let separator = pair.firstIndex(of: "=") else { continue }
+            let encodedName = String(pair[..<separator])
+            guard encodedName.removingPercentEncoding == name else { continue }
+            let encodedValue = String(pair[pair.index(after: separator)...])
+            return encodedValue.removingPercentEncoding
+        }
+        return nil
     }
 }
 
