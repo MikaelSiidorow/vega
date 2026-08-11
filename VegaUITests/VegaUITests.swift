@@ -371,7 +371,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
         XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 2))
         app.buttons["scan-barcode"].tap()
 
-        XCTAssertTrue(app.navigationBars["Scan barcode"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["simulate-barcode-scan"].waitForExistence(timeout: 2))
         let scanner = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         scanner.name = "Barcode scanner"
         scanner.lifetime = .keepAlways
