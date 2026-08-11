@@ -8,6 +8,7 @@ struct ContentView: View {
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @State private var model: SignInModel
     @State private var diaryModel: DiaryScreenModel
+    @State private var weightModel: WeightHistoryModel
     @State private var isWebSigningIn = false
     private let showsDiaryFixture: Bool
     private let barcodeScannerMode: BarcodeScannerMode
@@ -55,6 +56,7 @@ struct ContentView: View {
         _model = State(initialValue: signInModel)
         if let fixtureMode {
             let diaryStore = FixtureDailyDiaryStore(mode: fixtureMode)
+            let weightStore = FixtureWeightStore()
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
                     selectedDate: fixtureNow,
@@ -68,8 +70,19 @@ struct ContentView: View {
                     now: { fixtureNow }
                 )
             )
+            _weightModel = State(
+                initialValue: WeightHistoryModel(
+                    historyFetcher: weightStore,
+                    entryCreator: weightStore,
+                    entryUpdater: weightStore,
+                    entryDeleter: weightStore,
+                    calendar: fixtureCalendar,
+                    now: { fixtureNow }
+                )
+            )
         } else {
             let diaryAPI = DailyDiaryAPI(client: authenticatedClient)
+            let weightAPI = WeightAPI(client: authenticatedClient)
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
                     diaryFetcher: diaryAPI,
@@ -80,30 +93,44 @@ struct ContentView: View {
                     recentDiaryFetcher: diaryAPI
                 )
             )
+            _weightModel = State(
+                initialValue: WeightHistoryModel(
+                    historyFetcher: weightAPI,
+                    entryCreator: weightAPI,
+                    entryUpdater: weightAPI,
+                    entryDeleter: weightAPI
+                )
+            )
         }
     }
 
     var body: some View {
-        NavigationStack {
+        Group {
             if showsDiaryFixture {
-                DailyDiaryView(
-                    model: diaryModel,
+                AppHomeView(
+                    diaryModel: diaryModel,
+                    weightModel: weightModel,
                     instanceName: "fixture.wger.local",
                     signOut: {}
                 )
             } else if let account = model.connectedAccount {
-                DailyDiaryView(
-                    model: diaryModel,
+                AppHomeView(
+                    diaryModel: diaryModel,
+                    weightModel: weightModel,
                     instanceName: account.instance.url.host()
                         ?? account.instance.url.absoluteString,
                     signOut: signOut
                 )
-            } else if let challenge = model.pendingMFAChallenge {
-                mfaForm(challenge: challenge)
-            } else if model.isRestoringSession {
-                ProgressView("Restoring session…")
             } else {
-                signInForm
+                NavigationStack {
+                    if let challenge = model.pendingMFAChallenge {
+                        mfaForm(challenge: challenge)
+                    } else if model.isRestoringSession {
+                        ProgressView("Restoring session…")
+                    } else {
+                        signInForm
+                    }
+                }
             }
         }
         .task {

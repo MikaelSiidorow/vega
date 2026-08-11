@@ -103,6 +103,10 @@ final class WeightHistoryModel {
         entries.first
     }
 
+    var suggestedDate: Date {
+        now()
+    }
+
     var rangedEntries: [WgerWeightEntry] {
         entries.filter { selectedRange.includes($0.date, relativeTo: now(), calendar: calendar) }
             .sorted { $0.date < $1.date }
