@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var diaryModel: DiaryScreenModel
     @State private var isWebSigningIn = false
     private let showsDiaryFixture: Bool
+    private let barcodeScannerMode: BarcodeScannerMode
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
@@ -31,6 +32,13 @@ struct ContentView: View {
         let fixtureNow = Date(timeIntervalSince1970: 1_785_931_200)
 
         showsDiaryFixture = fixtureMode != nil
+        if arguments.contains("-uiTestBarcodeScannerFixture"),
+            let barcode = ProductBarcode("5901234123457")
+        {
+            barcodeScannerMode = .fixture(barcode)
+        } else {
+            barcodeScannerMode = .camera
+        }
         let preferredInstanceAddress =
             UserDefaults.standard.string(forKey: Self.preferredInstanceAddressKey)
             ?? "https://wger.de"
@@ -108,6 +116,7 @@ struct ContentView: View {
                 forKey: Self.preferredInstanceAddressKey
             )
         }
+        .environment(\.barcodeScannerMode, barcodeScannerMode)
     }
 
     private func mfaForm(challenge: MFAChallenge) -> some View {
