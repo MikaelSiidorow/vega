@@ -89,6 +89,99 @@ public enum WgerAPIModule {
         }
     }
 
+    /// Returns display metadata for the requested exercises.
+    public static func exerciseInfo(
+        serverURL: URL,
+        accessToken: String,
+        ids: [Int],
+        languageCode: String = "en"
+    ) async throws -> Components.Schemas.PaginatedExerciseInfoList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.exerciseinfoList(
+            query: .init(
+                idIn: ids,
+                languageCode: languageCode,
+                limit: ids.count
+            )
+        )
+        return try response.value()
+    }
+
+    /// Returns one page of set logs for a routine on a calendar date.
+    public static func workoutLogs(
+        serverURL: URL,
+        accessToken: String,
+        routineID: Int,
+        date: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedWorkoutLogList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.workoutlogList(
+            query: .init(
+                dateDate: date,
+                limit: limit,
+                offset: offset,
+                ordering: "date",
+                routine: routineID
+            )
+        )
+        return try response.value()
+    }
+
+    /// Records one completed workout set.
+    public static func createWorkoutLog(
+        serverURL: URL,
+        accessToken: String,
+        log: Components.Schemas.WorkoutLogRequest
+    ) async throws -> Components.Schemas.WorkoutLog {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.workoutlogCreate(body: .json(log))
+        switch response {
+        case .created(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
+    /// Corrects repetitions and weight on a completed workout set.
+    public static func updateWorkoutLog(
+        serverURL: URL,
+        accessToken: String,
+        id: String,
+        repetitions: String,
+        weight: String
+    ) async throws -> Components.Schemas.WorkoutLog {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.workoutlogPartialUpdate(
+            path: .init(id: id),
+            body: .json(.init(repetitions: repetitions, weight: weight))
+        )
+        switch response {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
+    /// Deletes one completed workout set.
+    public static func deleteWorkoutLog(
+        serverURL: URL,
+        accessToken: String,
+        id: String
+    ) async throws {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.workoutlogDestroy(path: .init(id: id))
+        switch response {
+        case .noContent:
+            return
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
     /// Returns the nutrients supplied by the foods scheduled in one plan.
     public static func nutritionPlanValues(
         serverURL: URL,
@@ -485,6 +578,28 @@ extension Operations.MealList.Output {
 
 extension Operations.IngredientinfoList.Output {
     fileprivate func value() throws -> Components.Schemas.PaginatedIngredientInfoList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.ExerciseinfoList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedExerciseInfoList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.WorkoutlogList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedWorkoutLogList {
         switch self {
         case .ok(let response):
             return try response.body.json
