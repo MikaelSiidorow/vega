@@ -158,6 +158,93 @@ nonisolated struct DailyDiaryTests {
         }
     }
 
+    @Test
+    func usesConfiguredNutritionGoalsWhenAnyArePresent() throws {
+        let plan = WgerNutritionPlan(
+            id: "plan",
+            creationDate: "2026-01-01",
+            start: "2026-01-01",
+            end: nil,
+            description: nil,
+            goalEnergy: 2_100,
+            goalProtein: 130,
+            goalCarbohydrates: nil,
+            goalFat: 65
+        )
+        let payload = DailyDiaryPayload(
+            plan: plan,
+            entries: [],
+            ingredients: [:],
+            plannedNutrition: .available(
+                WgerNutritionalValues(
+                    energy: 1_800,
+                    protein: 100,
+                    carbohydrates: 220,
+                    fat: 55
+                )
+            )
+        )
+
+        let diary = try DailyDiary.build(from: payload, date: Date())
+
+        #expect(
+            diary.nutritionGoal
+                == .available(
+                    NutritionTargets(
+                        energy: 2_100,
+                        protein: 130,
+                        carbohydrates: nil,
+                        fat: 65
+                    ),
+                    source: .configured
+                )
+        )
+    }
+
+    @Test
+    func fallsBackToNutritionScheduledInPlan() throws {
+        let payload = DailyDiaryPayload(
+            plan: Self.plan,
+            entries: [],
+            ingredients: [:],
+            plannedNutrition: .available(
+                WgerNutritionalValues(
+                    energy: 2_000.5,
+                    protein: 120,
+                    carbohydrates: 250,
+                    fat: 70
+                )
+            )
+        )
+
+        let diary = try DailyDiary.build(from: payload, date: Date())
+
+        #expect(
+            diary.nutritionGoal
+                == .available(
+                    NutritionTargets(
+                        energy: Decimal(2_000.5),
+                        protein: 120,
+                        carbohydrates: 250,
+                        fat: 70
+                    ),
+                    source: .plannedMeals
+                )
+        )
+    }
+
+    @Test
+    func representsMissingPlanAndUnavailableTargetsSeparately() throws {
+        let missingPlan = try DailyDiary.build(from: .empty, date: Date())
+        let unavailable = try DailyDiary.build(
+            from: DailyDiaryPayload(plan: Self.plan, entries: [], ingredients: [:]),
+            date: Date()
+        )
+
+        #expect(missingPlan.nutritionGoal == .missingPlan)
+        #expect(unavailable.nutritionGoal == .unavailable)
+    }
+
     private static let plan = WgerNutritionPlan(
         id: "plan",
         creationDate: "2026-01-01",

@@ -6,20 +6,28 @@ nonisolated struct DailyDiaryPayload: Equatable, Sendable {
     let entries: [WgerNutritionDiaryEntry]
     let ingredients: [Int: WgerIngredient]
     let meals: [WgerMeal]
+    let plannedNutrition: PlannedNutritionState
 
     init(
         plan: WgerNutritionPlan?,
         entries: [WgerNutritionDiaryEntry],
         ingredients: [Int: WgerIngredient],
-        meals: [WgerMeal] = []
+        meals: [WgerMeal] = [],
+        plannedNutrition: PlannedNutritionState = .unavailable
     ) {
         self.plan = plan
         self.entries = entries
         self.ingredients = ingredients
         self.meals = meals
+        self.plannedNutrition = plannedNutrition
     }
 
     static let empty = DailyDiaryPayload(plan: nil, entries: [], ingredients: [:], meals: [])
+}
+
+nonisolated enum PlannedNutritionState: Equatable, Sendable {
+    case available(WgerNutritionalValues)
+    case unavailable
 }
 
 nonisolated struct RecentDiaryPayload: Equatable, Sendable {
@@ -101,6 +109,12 @@ nonisolated protocol DailyDiaryTransport: Sendable {
         limit: Int,
         offset: Int
     ) async throws -> WgerPage<WgerMeal>
+
+    func nutritionPlanValues(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String
+    ) async throws -> WgerNutritionalValues
 
     func searchIngredients(
         instance: InstanceURL,
@@ -206,6 +220,18 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
             values: page.results.compactMap(\.vegaValue),
             hasNextPage: page.next != nil
         )
+    }
+
+    func nutritionPlanValues(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        planID: String
+    ) async throws -> WgerNutritionalValues {
+        try await WgerAPIModule.nutritionPlanValues(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            planID: planID
+        ).vegaValue
     }
 
     func searchIngredients(
@@ -316,6 +342,18 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
                 session: session,
                 planID: plan.id
             )
+            let plannedNutrition: PlannedNutritionState
+            do {
+                plannedNutrition = .available(
+                    try await transport.nutritionPlanValues(
+                        instance: instance,
+                        session: session,
+                        planID: plan.id
+                    )
+                )
+            } catch {
+                plannedNutrition = .unavailable
+            }
             let missingIDs = Set(entries.map(\.ingredientID)).subtracting(cachedIngredients.keys)
             var ingredients = cachedIngredients
             for batch in missingIDs.sorted().chunks(ofCount: Self.pageSize) {
@@ -332,7 +370,8 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
                 plan: plan,
                 entries: entries,
                 ingredients: ingredients,
-                meals: meals
+                meals: meals,
+                plannedNutrition: plannedNutrition
             )
         }
         ingredientCache.merge(result.ingredients) { _, latest in latest }

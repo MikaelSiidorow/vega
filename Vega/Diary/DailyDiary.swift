@@ -6,6 +6,7 @@ nonisolated struct DailyDiary: Equatable, Sendable {
     let meals: [DiaryMeal]
     let sections: [DiarySection]
     let totals: NutritionTotals
+    let nutritionGoal: NutritionGoalState
 
     static func build(from payload: DailyDiaryPayload, date: Date) throws -> DailyDiary {
         var sectionOrder: [DiarySection.ID] = []
@@ -51,8 +52,45 @@ nonisolated struct DailyDiary: Equatable, Sendable {
             planID: payload.plan?.id,
             meals: payload.meals.compactMap(DiaryMeal.init).sorted { $0.order < $1.order },
             sections: sections,
-            totals: sections.flatMap(\.items).reduce(.zero) { $0 + $1.nutrition }
+            totals: sections.flatMap(\.items).reduce(.zero) { $0 + $1.nutrition },
+            nutritionGoal: nutritionGoal(from: payload)
         )
+    }
+
+    private static func nutritionGoal(from payload: DailyDiaryPayload) -> NutritionGoalState {
+        guard let plan = payload.plan else { return .missingPlan }
+        if [plan.goalEnergy, plan.goalProtein, plan.goalCarbohydrates, plan.goalFat]
+            .contains(where: { $0 != nil })
+        {
+            return .available(
+                NutritionTargets(
+                    energy: decimal(plan.goalEnergy),
+                    protein: decimal(plan.goalProtein),
+                    carbohydrates: decimal(plan.goalCarbohydrates),
+                    fat: decimal(plan.goalFat)
+                ),
+                source: .configured
+            )
+        }
+        switch payload.plannedNutrition {
+        case .available(let values):
+            return .available(
+                NutritionTargets(
+                    energy: Decimal(values.energy),
+                    protein: Decimal(values.protein),
+                    carbohydrates: Decimal(values.carbohydrates),
+                    fat: Decimal(values.fat)
+                ),
+                source: .plannedMeals
+            )
+        case .unavailable:
+            return .unavailable
+        }
+    }
+
+    private static func decimal(_ value: Int?) -> Decimal? {
+        guard let value else { return nil }
+        return Decimal(value)
     }
 
     private static func ordered(
@@ -71,6 +109,24 @@ nonisolated struct DailyDiary: Equatable, Sendable {
             }
         }
     }
+}
+
+nonisolated enum NutritionGoalSource: Equatable, Sendable {
+    case configured
+    case plannedMeals
+}
+
+nonisolated enum NutritionGoalState: Equatable, Sendable {
+    case missingPlan
+    case available(NutritionTargets, source: NutritionGoalSource)
+    case unavailable
+}
+
+nonisolated struct NutritionTargets: Equatable, Sendable {
+    let energy: Decimal?
+    let protein: Decimal?
+    let carbohydrates: Decimal?
+    let fat: Decimal?
 }
 
 nonisolated struct DiarySection: Equatable, Identifiable, Sendable {
