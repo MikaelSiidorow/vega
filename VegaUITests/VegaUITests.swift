@@ -371,17 +371,14 @@ final class BarcodeScannerUITests: VegaUITestCase {
         XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 2))
         app.buttons["scan-barcode"].tap()
 
-        XCTAssertTrue(
-            app.descendants(matching: .any)["barcode-scanner"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.navigationBars["Scan barcode"].waitForExistence(timeout: 2))
         let scanner = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         scanner.name = "Barcode scanner"
         scanner.lifetime = .keepAlways
         add(scanner)
 
         app.buttons["cancel-barcode-scanner"].tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["barcode-scanner"].waitForNonExistence(timeout: 2)
-        )
+        XCTAssertTrue(app.navigationBars["Scan barcode"].waitForNonExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["recent-food-suggestions"].exists)
 
         app.buttons["scan-barcode"].tap()
