@@ -34,8 +34,9 @@ struct ProductBarcodeTests {
     @Test
     func scanGateAcceptsOnlyTheFirstValidRecognition() throws {
         var gate = BarcodeScanGate()
+        let acceptedBarcode = gate.accept("5901234123457")
 
-        #expect(try #require(gate.accept("5901234123457")).value == "5901234123457")
+        #expect(try #require(acceptedBarcode).value == "5901234123457")
         #expect(gate.accept("10012345000017") == nil)
         #expect(gate.acceptedBarcode?.value == "5901234123457")
     }
