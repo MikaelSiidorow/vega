@@ -353,3 +353,98 @@ final class AddDiaryEntryUITests: VegaUITestCase {
         add(result)
     }
 }
+
+final class BarcodeScannerUITests: VegaUITestCase {
+    @MainActor
+    func testScansBarcodeAndShowsPortionPreview() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-uiTestBasicDiaryFixture",
+            "-uiTestBarcodeScannerFixture",
+            "-AppleLocale",
+            "en_US",
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
+        app.buttons["add-diary-entry"].tap()
+        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 2))
+        app.buttons["scan-barcode"].tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["barcode-scanner"].waitForExistence(timeout: 2))
+        let scanner = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        scanner.name = "Barcode scanner"
+        scanner.lifetime = .keepAlways
+        add(scanner)
+
+        app.buttons["cancel-barcode-scanner"].tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["barcode-scanner"].waitForNonExistence(timeout: 2)
+        )
+        XCTAssertTrue(app.descendants(matching: .any)["recent-food-suggestions"].exists)
+
+        app.buttons["scan-barcode"].tap()
+        XCTAssertTrue(app.buttons["simulate-barcode-scan"].waitForExistence(timeout: 2))
+        app.buttons["simulate-barcode-scan"].tap()
+
+        let banana = app.buttons["ingredient-result-4"]
+        XCTAssertTrue(banana.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.searchFields["Search ingredients"].value as? String, "5901234123457")
+        let results = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        results.name = "Barcode scan search results"
+        results.lifetime = .keepAlways
+        add(results)
+
+        banana.tap()
+        XCTAssertTrue(app.textFields["diary-create-amount"].waitForExistence(timeout: 2))
+        let preview = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        preview.name = "Scanned product portion preview"
+        preview.lifetime = .keepAlways
+        add(preview)
+    }
+
+    @MainActor
+    func testEntersBarcodeWhenCameraIsUnavailable() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-uiTestBasicDiaryFixture",
+            "-uiTestBarcodeScannerUnavailableFixture",
+            "-AppleLocale",
+            "en_US",
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
+        app.buttons["add-diary-entry"].tap()
+        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 2))
+        app.buttons["scan-barcode"].tap()
+
+        XCTAssertTrue(app.staticTexts["Scanner unavailable"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["manual-barcode-fallback"].exists)
+        let unavailable = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        unavailable.name = "Barcode scanner unavailable"
+        unavailable.lifetime = .keepAlways
+        add(unavailable)
+
+        app.buttons["manual-barcode-fallback"].tap()
+        let code = app.textFields["manual-barcode-code"]
+        XCTAssertTrue(code.waitForExistence(timeout: 2))
+        code.tap()
+        code.typeText("1234")
+        XCTAssertTrue(
+            app.staticTexts["Enter an 8-, 12-, 13-, or 14-digit product code."]
+                .waitForExistence(timeout: 2)
+        )
+        let fallback = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        fallback.name = "Manual barcode fallback"
+        fallback.lifetime = .keepAlways
+        add(fallback)
+
+        code.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
+        code.typeText("5901234123457")
+        XCTAssertTrue(app.buttons["submit-manual-barcode"].isEnabled)
+        app.buttons["submit-manual-barcode"].tap()
+        XCTAssertTrue(app.buttons["ingredient-result-4"].waitForExistence(timeout: 5))
+    }
+}
