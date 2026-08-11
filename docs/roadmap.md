@@ -22,22 +22,23 @@ against a self-hosted wger server.
 
 ## Current work
 
-- Validate direct and browser-based authentication on a physical iPhone.
-- Verify the MFA challenge UI with a deterministic UI test and screenshot.
+- Add native EAN, UPC, and GTIN barcode scanning with a manual-code fallback,
+  then reuse the existing ingredient search and portion-preview flow.
+- Add server-backed API contract tests so generated Swift models are exercised
+  against real wger serializers and deterministic edge-case data.
 
 ## Next
 
+- Track daily body weight and show useful trends over time.
+- Browse exercises and workout plans, then record sets, repetitions, and weight.
 - Improve accessibility, localization, decimal input, and time-zone behavior.
-- Validate the complete nutrition flow on a physical iPhone.
 
 ## Later, based on use
 
 - Repeated and favorite foods.
-- Weight tracking and trends.
-- Barcode scanning, App Intents, and widgets.
+- App Intents and widgets.
 - Last-known-data caching and offline writes; reevaluate PowerSync when the
   required offline behavior is concrete.
-- Workout support if Vega grows beyond nutrition tracking.
 
 Keep this file forward-looking. Detailed experiments, personal usage notes,
 and temporary implementation plans belong in issues or local notes.
