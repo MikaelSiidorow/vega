@@ -38,4 +38,7 @@ build/
 .env.*
 !.env.example
 
+# Local Xcode signing overrides
+/Config/Local.xcconfig
+
 buildServer.json

@@ -1,0 +1,2 @@
+// Copy this file to Local.xcconfig for physical-device builds.
+DEVELOPMENT_TEAM = YOUR_TEAM_ID

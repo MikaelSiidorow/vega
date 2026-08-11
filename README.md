@@ -62,6 +62,17 @@ the target wger server nor regenerates the schema. No signing configuration or
 Apple Developer account is needed for simulator builds. Before discarding an
 ephemeral environment, commit and push any work that should survive.
 
+To build on a physical device, create the ignored local signing configuration
+and replace the placeholder with your Apple Developer team ID:
+
+```sh
+cp Config/Local.xcconfig.example Config/Local.xcconfig
+```
+
+Keep machine-specific signing settings in `Config/Local.xcconfig` instead of
+selecting a team in the project file. The app's Debug and Release configurations
+optionally include that file through the committed `Config/Base.xcconfig`.
+
 If Xcode 26.6 is installed but is not the active toolchain, select its actual
 installation path with `xcode-select --switch` or set `DEVELOPER_DIR` for the
 command. Override `IOS_SIMULATOR_DESTINATION` if the default simulator is not

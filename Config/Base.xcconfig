@@ -1,0 +1,3 @@
+// Shared build configuration. Machine-specific overrides belong in the
+// ignored Local.xcconfig file.
+#include? "Local.xcconfig"
