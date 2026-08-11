@@ -29,7 +29,7 @@ nonisolated struct ConnectedAccount: Equatable, Sendable {
 @MainActor
 @Observable
 final class SignInModel {
-    var instanceAddress = "https://wger.de"
+    var instanceAddress: String
     var username = ""
     var password = ""
     var mfaCode = ""
@@ -50,11 +50,13 @@ final class SignInModel {
     private var hasAttemptedRestore = false
 
     init(
+        instanceAddress: String = "https://wger.de",
         authenticationClient: any AuthenticationClient = AllauthClient(),
         webSessionRefresher: any SessionRefreshing = AllauthClient(),
         connectionChecker: any ConnectionChecking = WgerConnectionChecker(),
         sessionCoordinator: any SessionCoordinating = SessionCoordinator()
     ) {
+        self.instanceAddress = instanceAddress
         self.authenticationClient = authenticationClient
         self.webSessionRefresher = webSessionRefresher
         self.connectionChecker = connectionChecker
