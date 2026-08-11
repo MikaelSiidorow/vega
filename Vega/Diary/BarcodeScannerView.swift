@@ -136,7 +136,6 @@ struct BarcodeScannerView: View {
             .frame(maxWidth: .infinity)
             .background(.regularMaterial)
         }
-        .accessibilityIdentifier("barcode-scanner")
     }
 
     private var scannerControls: some View {
