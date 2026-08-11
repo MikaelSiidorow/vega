@@ -16,6 +16,7 @@ public enum WgerAPIModule {
     ) -> Client {
         Client(
             serverURL: serverURL,
+            configuration: .init(dateTranscoder: WgerDateTranscoder()),
             transport: URLSessionTransport(),
             middlewares: [BearerAuthenticationMiddleware(accessToken: accessToken)]
         )
@@ -200,6 +201,26 @@ public enum WgerAPIModule {
         }
         guard response.statusCode == 200 else {
             throw WgerAPIError.unexpectedStatus(response.statusCode)
+        }
+    }
+}
+
+/// Accepts both ISO 8601 forms emitted by supported wger/Django versions.
+struct WgerDateTranscoder: DateTranscoder {
+    private let standard = ISO8601DateTranscoder()
+    private let fractional = ISO8601DateTranscoder(options: [
+        .withInternetDateTime, .withFractionalSeconds,
+    ])
+
+    func encode(_ date: Date) throws -> String {
+        try standard.encode(date)
+    }
+
+    func decode(_ dateString: String) throws -> Date {
+        do {
+            return try fractional.decode(dateString)
+        } catch {
+            return try standard.decode(dateString)
         }
     }
 }
