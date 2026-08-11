@@ -200,7 +200,8 @@ nonisolated struct DailyDiaryAPITests {
         )
 
         #expect(try await api.searchIngredients(query: "  oats ") == [ingredient])
-        #expect(await transport.searchQueries == ["oats"])
+        #expect(try await api.searchIngredients(query: "5901234123457") == [ingredient])
+        #expect(await transport.searchQueries == ["oats", "5901234123457"])
         #expect(try await api.searchIngredients(query: "x").isEmpty)
 
         let date = try #require(ISO8601DateFormatter().date(from: "2026-08-05T12:30:00Z"))

@@ -32,7 +32,11 @@ struct ContentView: View {
         let fixtureNow = Date(timeIntervalSince1970: 1_785_931_200)
 
         showsDiaryFixture = fixtureMode != nil
-        if arguments.contains("-uiTestBarcodeScannerFixture"),
+        if arguments.contains("-uiTestBarcodeScannerUnavailableFixture") {
+            barcodeScannerMode = .unavailable(
+                "Camera access is off. Allow it in Settings or enter the code manually."
+            )
+        } else if arguments.contains("-uiTestBarcodeScannerFixture"),
             let barcode = ProductBarcode("5901234123457")
         {
             barcodeScannerMode = .fixture(barcode)

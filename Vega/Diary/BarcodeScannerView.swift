@@ -5,6 +5,7 @@ import VisionKit
 enum BarcodeScannerMode: Equatable {
     case camera
     case fixture(ProductBarcode)
+    case unavailable(String)
 }
 
 private struct BarcodeScannerModeKey: EnvironmentKey {
@@ -38,6 +39,8 @@ struct BarcodeScannerView: View {
                         fixtureScanner(barcode)
                     case .camera:
                         cameraContent
+                    case .unavailable(let message):
+                        unavailableContent(message)
                     }
                 }
             }
@@ -67,16 +70,20 @@ struct BarcodeScannerView: View {
         case .manual:
             manualEntry
         case .unavailable(let message):
-            ContentUnavailableView {
-                Label("Scanner unavailable", systemImage: "camera.fill")
-            } description: {
-                Text(message)
-            } actions: {
-                Button("Enter code manually") {
-                    phase = .manual
-                }
-                .accessibilityIdentifier("manual-barcode-fallback")
+            unavailableContent(message)
+        }
+    }
+
+    private func unavailableContent(_ message: String) -> some View {
+        ContentUnavailableView {
+            Label("Scanner unavailable", systemImage: "camera.fill")
+        } description: {
+            Text(message)
+        } actions: {
+            Button("Enter code manually") {
+                phase = .manual
             }
+            .accessibilityIdentifier("manual-barcode-fallback")
         }
     }
 
