@@ -183,8 +183,10 @@ struct DailyDiaryView: View {
                             .accessibilityAddTraits(item.remoteID == nil ? [] : .isButton)
                             .swipeActions {
                                 if let remoteID = item.remoteID {
-                                    Button("Delete", role: .destructive) {
+                                    Button(role: .destructive) {
                                         pendingDeletion = item
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
                                     .accessibilityIdentifier("delete-diary-item-\(remoteID)")
                                 }
