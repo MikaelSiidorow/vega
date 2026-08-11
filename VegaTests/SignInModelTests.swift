@@ -13,6 +13,13 @@ struct SignInModelTests {
     }
 
     @Test
+    func acceptsAPreviouslyUsedInstanceAddress() {
+        let model = SignInModel(instanceAddress: "https://wger.example/")
+
+        #expect(model.instanceAddress == "https://wger.example/")
+    }
+
+    @Test
     func provesConnectionPersistsSessionAndClearsSecrets() async throws {
         let credentialStore = InMemorySessionCredentialStore()
         let model = SignInModel(

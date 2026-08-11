@@ -3,6 +3,8 @@ import Foundation
 import SwiftUI
 
 struct ContentView: View {
+    private static let preferredInstanceAddressKey = "preferred-instance-address"
+
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @State private var model: SignInModel
     @State private var diaryModel: DiaryScreenModel
@@ -29,7 +31,11 @@ struct ContentView: View {
         let fixtureNow = Date(timeIntervalSince1970: 1_785_931_200)
 
         showsDiaryFixture = fixtureMode != nil
+        let preferredInstanceAddress =
+            UserDefaults.standard.string(forKey: Self.preferredInstanceAddressKey)
+            ?? "https://wger.de"
         let signInModel = SignInModel(
+            instanceAddress: preferredInstanceAddress,
             authenticationClient: showsMFAFixture
                 ? MFAFixtureAuthenticationClient() : AllauthClient(),
             sessionCoordinator: sessionCoordinator
@@ -95,6 +101,12 @@ struct ContentView: View {
                 return
             }
             await model.restoreSession()
+        }
+        .onChange(of: model.instanceAddress) { _, instanceAddress in
+            UserDefaults.standard.set(
+                instanceAddress,
+                forKey: Self.preferredInstanceAddressKey
+            )
         }
     }
 
