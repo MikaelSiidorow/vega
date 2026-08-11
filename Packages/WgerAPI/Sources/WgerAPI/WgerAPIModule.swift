@@ -118,6 +118,76 @@ public enum WgerAPIModule {
         return try response.value()
     }
 
+    /// Returns one newest-first page of the signed-in user's weight history.
+    public static func weightEntries(
+        serverURL: URL,
+        accessToken: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedWeightEntryList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.weightentryList(
+            query: .init(limit: limit, offset: offset, ordering: "-date")
+        )
+        return try response.value()
+    }
+
+    /// Creates one body-weight measurement.
+    public static func createWeightEntry(
+        serverURL: URL,
+        accessToken: String,
+        date: Date,
+        weight: String
+    ) async throws -> Components.Schemas.WeightEntry {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.weightentryCreate(
+            body: .json(.init(date: date, weight: weight))
+        )
+        switch response {
+        case .created(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
+    /// Replaces the editable fields of one body-weight measurement.
+    public static func updateWeightEntry(
+        serverURL: URL,
+        accessToken: String,
+        id: Int,
+        date: Date,
+        weight: String
+    ) async throws -> Components.Schemas.WeightEntry {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.weightentryUpdate(
+            path: .init(id: id),
+            body: .json(.init(date: date, weight: weight))
+        )
+        switch response {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
+    /// Deletes one body-weight measurement.
+    public static func deleteWeightEntry(
+        serverURL: URL,
+        accessToken: String,
+        id: Int
+    ) async throws {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.weightentryDestroy(path: .init(id: id))
+        switch response {
+        case .noContent:
+            return
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
     /// Creates one consumed ingredient in the nutrition diary.
     public static func createNutritionDiaryEntry(
         serverURL: URL,
@@ -349,6 +419,17 @@ extension Operations.MealList.Output {
 
 extension Operations.IngredientinfoList.Output {
     fileprivate func value() throws -> Components.Schemas.PaginatedIngredientInfoList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.WeightentryList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedWeightEntryList {
         switch self {
         case .ok(let response):
             return try response.body.json
