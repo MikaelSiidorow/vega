@@ -57,6 +57,31 @@ final class SignInFormUITests: VegaUITestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
+
+    @MainActor
+    func testShowsMFAChallenge() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-skipSessionRestore", "-uiTestMFAFixture"]
+        app.launch()
+
+        let username = app.textFields["Username or email"]
+        XCTAssertTrue(username.waitForExistence(timeout: 5))
+        username.tap()
+        username.typeText("test-user")
+        let password = app.secureTextFields["Password"]
+        password.tap()
+        password.typeText("secret")
+        app.buttons["Sign in"].tap()
+
+        XCTAssertTrue(app.textFields["mfa-code"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Passkey detected"].exists)
+        XCTAssertTrue(app.buttons["verify-mfa"].exists)
+
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "MFA verification"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
 }
 
 final class BasicLoggingDiaryUITests: VegaUITestCase {
