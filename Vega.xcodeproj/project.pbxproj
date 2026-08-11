@@ -201,11 +201,11 @@
 			);
 			mainGroup = 73FA6232302310800023300C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10000000000000000000003 /* XCLocalSwiftPackageReference "Packages/WgerAPI" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73FA623C302310800023300C /* Products */;
-			packageReferences = (
-				A10000000000000000000003 /* XCLocalSwiftPackageReference "WgerAPI" */,
-			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -541,21 +541,6 @@
 		};
 /* End XCBuildConfiguration section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		A10000000000000000000003 /* XCLocalSwiftPackageReference "WgerAPI" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/WgerAPI;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A10000000000000000000002 /* WgerAPI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A10000000000000000000003 /* XCLocalSwiftPackageReference "WgerAPI" */;
-			productName = WgerAPI;
-		};
-/* End XCSwiftPackageProductDependency section */
-
 /* Begin XCConfigurationList section */
 		73FA6236302310800023300C /* Build configuration list for PBXProject "Vega" */ = {
 			isa = XCConfigurationList;
@@ -594,6 +579,21 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000003 /* XCLocalSwiftPackageReference "Packages/WgerAPI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WgerAPI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000002 /* WgerAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000003 /* XCLocalSwiftPackageReference "Packages/WgerAPI" */;
+			productName = WgerAPI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 73FA6233302310800023300C /* Project object */;
 }
