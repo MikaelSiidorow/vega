@@ -8,6 +8,7 @@ struct AppHomeView: View {
     }
 
     @Bindable var diaryModel: DiaryScreenModel
+    @Bindable var workoutModel: WorkoutScreenModel
     @Bindable var weightModel: WeightHistoryModel
     let instanceName: String
     let signOut: () -> Void
@@ -27,7 +28,11 @@ struct AppHomeView: View {
 
             Tab("Workouts", systemImage: "dumbbell.fill", value: .workouts) {
                 NavigationStack {
-                    WorkoutsPlaceholderView(instanceName: instanceName, signOut: signOut)
+                    WorkoutsView(
+                        model: workoutModel,
+                        instanceName: instanceName,
+                        signOut: signOut
+                    )
                 }
             }
 
@@ -41,30 +46,5 @@ struct AppHomeView: View {
                 }
             }
         }
-    }
-}
-
-private struct WorkoutsPlaceholderView: View {
-    let instanceName: String
-    let signOut: () -> Void
-
-    var body: some View {
-        ContentUnavailableView {
-            Label("No workouts yet", systemImage: "dumbbell.fill")
-        } description: {
-            Text("Your workout plans and today's training will appear here.")
-        }
-        .navigationTitle("Workouts")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Text(instanceName)
-                    Button("Sign out", role: .destructive, action: signOut)
-                } label: {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
-            }
-        }
-        .accessibilityIdentifier("workouts-placeholder")
     }
 }

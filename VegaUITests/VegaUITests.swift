@@ -537,6 +537,7 @@ final class WeightHistoryUITests: VegaUITestCase {
         XCTAssertTrue(app.buttons["save-weight-entry"].isEnabled)
         capture("Add weight entry")
         app.buttons["save-weight-entry"].tap()
+        XCTAssertTrue(input.waitForNonExistence(timeout: 5))
 
         let created = app.descendants(matching: .any)["weight-entry-15"]
         XCTAssertTrue(created.waitForExistence(timeout: 5))
@@ -549,6 +550,7 @@ final class WeightHistoryUITests: VegaUITestCase {
         replaceText("79.2", in: input, using: app, placeholder: "Weight")
         capture("Edit weight entry")
         app.buttons["save-weight-entry"].tap()
+        XCTAssertTrue(input.waitForNonExistence(timeout: 5))
         XCTAssertTrue(created.waitForExistence(timeout: 5))
         XCTAssertTrue(created.label.contains("79.2 kg"))
         capture("Weight history after editing")
@@ -588,7 +590,7 @@ final class AppShellUITests: VegaUITestCase {
 
         app.tabBars.buttons["Workouts"].tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["workouts-placeholder"].waitForExistence(timeout: 2)
+            app.descendants(matching: .any)["workout-dashboard"].waitForExistence(timeout: 5)
         )
         XCTAssertTrue(app.buttons["Account"].exists)
         capture("Workouts tab")
@@ -602,5 +604,71 @@ final class AppShellUITests: VegaUITestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["diary-item-oats"].waitForExistence(timeout: 2))
         capture("Diary tab after navigation")
+    }
+}
+
+final class WorkoutUITests: VegaUITestCase {
+    @MainActor
+    func testBrowsesRoutineAndRecordsCorrectsAndDeletesSet() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+
+        XCTAssertTrue(app.tabBars.buttons["Workouts"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Workouts"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["today-workout"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["workout-exercise-7"].exists)
+        capture("Today's workout")
+
+        let edited = app.descendants(matching: .any)["workout-log-fixture-log-2"]
+        app.buttons["edit-workout-log-fixture-log-2"].tap()
+        let repetitions = app.textFields["workout-repetitions"]
+        XCTAssertTrue(repetitions.waitForExistence(timeout: 2))
+        focus(repetitions, in: app)
+        replaceText("12", in: repetitions, using: app, placeholder: "Repetitions")
+        let weight = app.textFields["workout-weight"]
+        focus(weight, in: app)
+        replaceText("47.5", in: weight, using: app, placeholder: "Weight (kg)")
+        capture("Edit workout set")
+        app.buttons["save-workout-set"].tap()
+        XCTAssertTrue(repetitions.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(edited.waitForExistence(timeout: 5))
+        let updated = app.staticTexts.matching(identifier: "workout-log-fixture-log-2")
+            .matching(NSPredicate(format: "label CONTAINS %@", "12 reps · 47.5 kg"))
+            .firstMatch
+        XCTAssertTrue(updated.waitForExistence(timeout: 5))
+
+        let deleted = app.descendants(matching: .any)["workout-log-fixture-log-1"]
+        deleted.swipeLeft()
+        let deleteAction = app.buttons["delete-workout-log-fixture-log-1"]
+        XCTAssertTrue(deleteAction.waitForExistence(timeout: 2))
+        deleteAction.tap()
+        XCTAssertTrue(app.buttons["Delete set"].waitForExistence(timeout: 2))
+        capture("Delete workout set confirmation")
+        app.buttons["Delete set"].tap()
+        XCTAssertTrue(deleted.waitForNonExistence(timeout: 5))
+        capture("Workout after deleting set")
+
+        let logSet = app.buttons["log-workout-set-8"]
+        XCTAssertTrue(logSet.waitForExistence(timeout: 2))
+        if !logSet.isHittable { app.swipeUp() }
+        logSet.tap()
+        XCTAssertTrue(app.textFields["workout-repetitions"].waitForExistence(timeout: 2))
+        capture("Log workout set")
+        app.buttons["save-workout-set"].tap()
+        XCTAssertTrue(
+            app.textFields["workout-repetitions"].waitForNonExistence(timeout: 5))
+
+        let created = app.descendants(matching: .any)["workout-log-fixture-log-3"]
+        XCTAssertTrue(created.waitForExistence(timeout: 5))
+        capture("Workout after recording set")
+
+        let routine = app.descendants(matching: .any)["workout-routine-42"]
+        for _ in 0..<3 where !routine.isHittable {
+            app.swipeUp()
+        }
+        routine.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["routine-plan"].waitForExistence(timeout: 2))
+        capture("Workout routine plan")
     }
 }

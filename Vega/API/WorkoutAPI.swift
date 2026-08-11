@@ -38,6 +38,20 @@ nonisolated protocol WorkoutTransport: Sendable {
         ids: [Int]
     ) async throws -> [WorkoutExerciseRecord]
 
+    func weightUnits(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        limit: Int,
+        offset: Int
+    ) async throws -> WgerPage<WorkoutWeightUnitRecord>
+
+    func repetitionUnits(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        limit: Int,
+        offset: Int
+    ) async throws -> WgerPage<WorkoutRepetitionUnitRecord>
+
     func logs(
         instance: InstanceURL,
         session: AuthenticationSession,
@@ -94,11 +108,24 @@ nonisolated struct WorkoutSetRecord: Equatable, Sendable {
     let targetWeight: String?
     let repetitionsUnitID: Int?
     let weightUnitID: Int?
+    let repetitionsIncrement: String?
+    let weightIncrement: String?
+    let rest: String?
     let prescription: String
     let comment: String
 }
 
 nonisolated struct WorkoutExerciseRecord: Equatable, Sendable {
+    let id: Int
+    let name: String
+}
+
+nonisolated struct WorkoutWeightUnitRecord: Equatable, Sendable {
+    let id: Int
+    let name: String
+}
+
+nonisolated struct WorkoutRepetitionUnitRecord: Equatable, Sendable {
     let id: Int
     let name: String
 }
@@ -155,6 +182,9 @@ nonisolated struct WgerWorkoutTransport: WorkoutTransport {
                         targetWeight: $0.weight,
                         repetitionsUnitID: $0.repetitionsUnit,
                         weightUnitID: $0.weightUnit,
+                        repetitionsIncrement: $0.repetitionsRounding,
+                        weightIncrement: $0.weightRounding,
+                        rest: $0.rest,
                         prescription: $0.textRepr,
                         comment: $0.comment
                     )
@@ -179,6 +209,42 @@ nonisolated struct WgerWorkoutTransport: WorkoutTransport {
                 name: $0.translations.first?.name ?? "Exercise \($0.id)"
             )
         }
+    }
+
+    func weightUnits(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        limit: Int,
+        offset: Int
+    ) async throws -> WgerPage<WorkoutWeightUnitRecord> {
+        let page = try await WgerAPIModule.workoutWeightUnits(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            limit: limit,
+            offset: offset
+        )
+        return WgerPage(
+            values: page.results.map { WorkoutWeightUnitRecord(id: $0.id, name: $0.name) },
+            hasNextPage: page.next != nil
+        )
+    }
+
+    func repetitionUnits(
+        instance: InstanceURL,
+        session: AuthenticationSession,
+        limit: Int,
+        offset: Int
+    ) async throws -> WgerPage<WorkoutRepetitionUnitRecord> {
+        let page = try await WgerAPIModule.workoutRepetitionUnits(
+            serverURL: instance.url,
+            accessToken: session.accessToken,
+            limit: limit,
+            offset: offset
+        )
+        return WgerPage(
+            values: page.results.map { WorkoutRepetitionUnitRecord(id: $0.id, name: $0.name) },
+            hasNextPage: page.next != nil
+        )
     }
 
     func logs(
@@ -219,10 +285,10 @@ nonisolated struct WgerWorkoutTransport: WorkoutTransport {
                 iteration: day.iteration,
                 slotEntry: plan.slotEntryID,
                 exercise: plan.exerciseID,
-                repetitionsUnit: plan.repetitionsUnitID,
+                repetitionsUnit: input.repetitionsUnitID ?? plan.repetitionsUnitID,
                 repetitions: input.repetitions,
                 repetitionsTarget: plan.targetRepetitions,
-                weightUnit: plan.weightUnitID,
+                weightUnit: input.weightUnitID ?? plan.weightUnitID,
                 weight: input.weight,
                 weightTarget: plan.targetWeight
             )
@@ -240,7 +306,9 @@ nonisolated struct WgerWorkoutTransport: WorkoutTransport {
             accessToken: session.accessToken,
             id: id,
             repetitions: input.repetitions,
-            weight: input.weight
+            weight: input.weight,
+            repetitionsUnit: input.repetitionsUnitID,
+            weightUnit: input.weightUnitID
         )
     }
 
@@ -281,6 +349,16 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
                 instance: instance,
                 session: session
             )
+            async let weightUnitRecords = Self.allWeightUnits(
+                transport: transport,
+                instance: instance,
+                session: session
+            )
+            async let repetitionUnitRecords = Self.allRepetitionUnits(
+                transport: transport,
+                instance: instance,
+                session: session
+            )
             var daysByRoutine: [Int: [WorkoutDayRecord]] = [:]
             for routine in records {
                 daysByRoutine[routine.id] = try await transport.dayPlans(
@@ -302,19 +380,26 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
                     exercises[exercise.id] = exercise
                 }
             }
-            let routines = records.map { routine in
+            let routines = try records.map { routine in
                 WorkoutRoutine(
                     id: routine.id,
                     name: routine.name?.nilIfBlank ?? "Routine \(routine.id)",
                     description: routine.description?.nilIfBlank,
                     start: routine.start,
                     end: routine.end,
-                    days: (daysByRoutine[routine.id] ?? []).map {
-                        Self.day($0, routine: routine, exercises: exercises)
+                    days: try (daysByRoutine[routine.id] ?? []).map {
+                        try Self.day(
+                            $0,
+                            routine: routine,
+                            exercises: exercises,
+                            calendar: calendar
+                        )
                     }
                 )
             }
-            let today = routines.lazy.flatMap(\.days).first { $0.date == dateKey }
+            let today = routines.lazy.flatMap(\.days).first {
+                calendar.isDate($0.date, inSameDayAs: date)
+            }
             let logs: [WorkoutSetLog] =
                 if let today {
                     try await Self.allLogs(
@@ -327,7 +412,21 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
                 } else {
                     []
                 }
-            return WorkoutDashboard(routines: routines, today: today, logs: logs)
+            let (weightUnits, repetitionUnits) = try await (
+                weightUnitRecords,
+                repetitionUnitRecords
+            )
+            return WorkoutDashboard(
+                routines: routines,
+                today: today,
+                logs: logs,
+                weightUnits: weightUnits.map {
+                    WorkoutWeightUnit(id: $0.id, name: $0.name)
+                },
+                repetitionUnits: repetitionUnits.map {
+                    WorkoutRepetitionUnit(id: $0.id, name: $0.name)
+                }
+            )
         }
     }
 
@@ -411,20 +510,61 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
         }
     }
 
+    private static func allWeightUnits(
+        transport: any WorkoutTransport,
+        instance: InstanceURL,
+        session: AuthenticationSession
+    ) async throws -> [WorkoutWeightUnitRecord] {
+        var result: [WorkoutWeightUnitRecord] = []
+        var offset = 0
+        while true {
+            let page = try await transport.weightUnits(
+                instance: instance,
+                session: session,
+                limit: pageSize,
+                offset: offset
+            )
+            result.append(contentsOf: page.values)
+            guard page.hasNextPage, !page.values.isEmpty else { return result }
+            offset += page.values.count
+        }
+    }
+
+    private static func allRepetitionUnits(
+        transport: any WorkoutTransport,
+        instance: InstanceURL,
+        session: AuthenticationSession
+    ) async throws -> [WorkoutRepetitionUnitRecord] {
+        var result: [WorkoutRepetitionUnitRecord] = []
+        var offset = 0
+        while true {
+            let page = try await transport.repetitionUnits(
+                instance: instance,
+                session: session,
+                limit: pageSize,
+                offset: offset
+            )
+            result.append(contentsOf: page.values)
+            guard page.hasNextPage, !page.values.isEmpty else { return result }
+            offset += page.values.count
+        }
+    }
+
     private static func day(
         _ record: WorkoutDayRecord,
         routine: WorkoutRoutineRecord,
-        exercises: [Int: WorkoutExerciseRecord]
-    ) -> PlannedWorkoutDay {
+        exercises: [Int: WorkoutExerciseRecord],
+        calendar: Calendar
+    ) throws -> PlannedWorkoutDay {
         PlannedWorkoutDay(
             routineID: routine.id,
             routineName: routine.name?.nilIfBlank ?? "Routine \(routine.id)",
             dayID: record.dayID,
             name: record.name?.nilIfBlank ?? "Workout day",
-            date: record.date,
+            date: try workoutDate(record.date, calendar: calendar),
             iteration: record.iteration,
             isRest: record.isRest,
-            exercises: record.sets.map {
+            exercises: try record.sets.map {
                 WorkoutExercisePlan(
                     slotEntryID: $0.slotEntryID,
                     exerciseID: $0.exerciseID,
@@ -434,11 +574,60 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
                     targetWeight: $0.targetWeight,
                     repetitionsUnitID: $0.repetitionsUnitID,
                     weightUnitID: $0.weightUnitID,
+                    repetitionsIncrement: try decimal(
+                        $0.repetitionsIncrement,
+                        fallback: 1,
+                        field: "repetitions_rounding"
+                    ),
+                    weightIncrement: try decimal(
+                        $0.weightIncrement,
+                        fallback: 1.25,
+                        field: "weight_rounding"
+                    ),
+                    restSeconds: try seconds($0.rest),
                     prescription: $0.prescription,
                     comment: $0.comment.nilIfBlank
                 )
             }
         )
+    }
+
+    private static func decimal(
+        _ value: String?,
+        fallback: Decimal,
+        field: String
+    ) throws -> Decimal {
+        guard let value else { return fallback }
+        guard let parsed = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX")) else {
+            throw WorkoutDomainError.invalidDecimal(field: field, value: value)
+        }
+        return parsed
+    }
+
+    private static func seconds(_ value: String?) throws -> Int {
+        let decimal = try decimal(value, fallback: 90, field: "rest")
+        let number = NSDecimalNumber(decimal: decimal)
+        guard number != .notANumber, number.intValue >= 0 else {
+            throw WorkoutDomainError.invalidDecimal(field: "rest", value: value ?? "")
+        }
+        return number.intValue
+    }
+
+    private static func workoutDate(_ value: String, calendar: Calendar) throws -> Date {
+        let parts = value.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+            let year = Int(parts[0]),
+            let month = Int(parts[1]),
+            let day = Int(parts[2]),
+            let date = calendar.date(from: DateComponents(year: year, month: month, day: day))
+        else {
+            throw WorkoutDomainError.invalidDate(value)
+        }
+        let parsed = calendar.dateComponents([.year, .month, .day], from: date)
+        guard parsed.year == year, parsed.month == month, parsed.day == day else {
+            throw WorkoutDomainError.invalidDate(value)
+        }
+        return date
     }
 
     private static func dateKey(_ date: Date, calendar: Calendar) -> String {
@@ -452,6 +641,11 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
     }
 }
 
+nonisolated enum WorkoutDomainError: Error, Equatable {
+    case invalidDate(String)
+    case invalidDecimal(field: String, value: String)
+}
+
 nonisolated extension WorkoutSetLog {
     fileprivate init?(_ value: Components.Schemas.WorkoutLog) {
         guard let id = value.id else { return nil }
@@ -463,7 +657,9 @@ nonisolated extension WorkoutSetLog {
             slotEntryID: value.slotEntry,
             exerciseID: value.exercise,
             repetitions: value.repetitions,
-            weight: value.weight
+            weight: value.weight,
+            repetitionsUnitID: value.repetitionsUnit,
+            weightUnitID: value.weightUnit
         )
     }
 }

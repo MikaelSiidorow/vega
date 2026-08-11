@@ -129,6 +129,34 @@ public enum WgerAPIModule {
         return try response.value()
     }
 
+    /// Returns one page of units accepted for workout weight values.
+    public static func workoutWeightUnits(
+        serverURL: URL,
+        accessToken: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedRoutineWeightUnitList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.settingWeightunitList(
+            query: .init(limit: limit, offset: offset)
+        )
+        return try response.value()
+    }
+
+    /// Returns one page of units accepted for workout repetition values.
+    public static func workoutRepetitionUnits(
+        serverURL: URL,
+        accessToken: String,
+        limit: Int,
+        offset: Int
+    ) async throws -> Components.Schemas.PaginatedRepetitionUnitList {
+        let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        let response = try await client.settingRepetitionunitList(
+            query: .init(limit: limit, offset: offset)
+        )
+        return try response.value()
+    }
+
     /// Records one completed workout set.
     public static func createWorkoutLog(
         serverURL: URL,
@@ -151,12 +179,21 @@ public enum WgerAPIModule {
         accessToken: String,
         id: String,
         repetitions: String,
-        weight: String
+        weight: String,
+        repetitionsUnit: Int?,
+        weightUnit: Int?
     ) async throws -> Components.Schemas.WorkoutLog {
         let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
         let response = try await client.workoutlogPartialUpdate(
             path: .init(id: id),
-            body: .json(.init(repetitions: repetitions, weight: weight))
+            body: .json(
+                .init(
+                    repetitionsUnit: repetitionsUnit,
+                    repetitions: repetitions,
+                    weightUnit: weightUnit,
+                    weight: weight
+                )
+            )
         )
         switch response {
         case .ok(let response):
@@ -600,6 +637,28 @@ extension Operations.ExerciseinfoList.Output {
 
 extension Operations.WorkoutlogList.Output {
     fileprivate func value() throws -> Components.Schemas.PaginatedWorkoutLogList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.SettingWeightunitList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedRoutineWeightUnitList {
+        switch self {
+        case .ok(let response):
+            return try response.body.json
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+}
+
+extension Operations.SettingRepetitionunitList.Output {
+    fileprivate func value() throws -> Components.Schemas.PaginatedRepetitionUnitList {
         switch self {
         case .ok(let response):
             return try response.body.json

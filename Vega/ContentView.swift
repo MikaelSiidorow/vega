@@ -8,6 +8,7 @@ struct ContentView: View {
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @State private var model: SignInModel
     @State private var diaryModel: DiaryScreenModel
+    @State private var workoutModel: WorkoutScreenModel
     @State private var weightModel: WeightHistoryModel
     @State private var isWebSigningIn = false
     private let showsDiaryFixture: Bool
@@ -57,6 +58,7 @@ struct ContentView: View {
         _model = State(initialValue: signInModel)
         if let fixtureMode {
             let diaryStore = FixtureDailyDiaryStore(mode: fixtureMode)
+            let workoutStore = FixtureWorkoutStore()
             let weightStore = FixtureWeightStore()
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
@@ -71,6 +73,16 @@ struct ContentView: View {
                     now: { fixtureNow }
                 )
             )
+            _workoutModel = State(
+                initialValue: WorkoutScreenModel(
+                    dashboardFetcher: workoutStore,
+                    setCreator: workoutStore,
+                    setUpdater: workoutStore,
+                    setDeleter: workoutStore,
+                    calendar: fixtureCalendar,
+                    now: { FixtureWorkoutStore.now }
+                )
+            )
             _weightModel = State(
                 initialValue: WeightHistoryModel(
                     historyFetcher: weightStore,
@@ -83,6 +95,7 @@ struct ContentView: View {
             )
         } else {
             let diaryAPI = DailyDiaryAPI(client: authenticatedClient)
+            let workoutAPI = WorkoutAPI(client: authenticatedClient)
             let weightAPI = WeightAPI(client: authenticatedClient)
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
@@ -92,6 +105,14 @@ struct ContentView: View {
                     ingredientSearcher: diaryAPI,
                     diaryEntryCreator: diaryAPI,
                     recentDiaryFetcher: diaryAPI
+                )
+            )
+            _workoutModel = State(
+                initialValue: WorkoutScreenModel(
+                    dashboardFetcher: workoutAPI,
+                    setCreator: workoutAPI,
+                    setUpdater: workoutAPI,
+                    setDeleter: workoutAPI
                 )
             )
             _weightModel = State(
@@ -110,6 +131,7 @@ struct ContentView: View {
             if showsDiaryFixture {
                 AppHomeView(
                     diaryModel: diaryModel,
+                    workoutModel: workoutModel,
                     weightModel: weightModel,
                     instanceName: "fixture.wger.local",
                     signOut: {}
@@ -117,6 +139,7 @@ struct ContentView: View {
             } else if let account = model.connectedAccount {
                 AppHomeView(
                     diaryModel: diaryModel,
+                    workoutModel: workoutModel,
                     weightModel: weightModel,
                     instanceName: account.instance.url.host()
                         ?? account.instance.url.absoluteString,
