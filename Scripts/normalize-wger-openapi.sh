@@ -36,6 +36,74 @@ jq '
         .get.responses["200"].content["application/json"].schema = {
             "$ref": "#/components/schemas/NutritionalValues"
         }
+    # The custom gym action returns WorkoutDayDataGymModeSerializer(many=True),
+    # but schema generation infers the viewset default Routine serializer.
+    | .components.schemas.WorkoutSetPlan = {
+        "type": "object",
+        "description": "One resolved exercise prescription in a workout slot.",
+        "properties": {
+            "slot_entry_id": {"type": "integer"},
+            "exercise": {"type": "integer"},
+            "sets": {"type": "integer"},
+            "max_sets": {"type": "integer", "nullable": true},
+            "weight": {"type": "string", "format": "decimal", "nullable": true},
+            "max_weight": {"type": "string", "format": "decimal", "nullable": true},
+            "weight_unit": {"type": "integer", "nullable": true},
+            "weight_rounding": {"type": "string", "format": "decimal", "nullable": true},
+            "repetitions": {"type": "string", "format": "decimal", "nullable": true},
+            "max_repetitions": {"type": "string", "format": "decimal", "nullable": true},
+            "repetitions_unit": {"type": "integer", "nullable": true},
+            "repetitions_rounding": {
+                "type": "string", "format": "decimal", "nullable": true
+            },
+            "rir": {"type": "string", "format": "decimal", "nullable": true},
+            "max_rir": {"type": "string", "format": "decimal", "nullable": true},
+            "rpe": {"type": "string", "format": "decimal", "nullable": true},
+            "rest": {"type": "string", "format": "decimal", "nullable": true},
+            "max_rest": {"type": "string", "format": "decimal", "nullable": true},
+            "type": {"type": "string"},
+            "text_repr": {"type": "string"},
+            "comment": {"type": "string"}
+        },
+        "required": [
+            "slot_entry_id", "exercise", "sets", "max_sets", "weight", "max_weight",
+            "weight_unit", "weight_rounding", "repetitions", "max_repetitions",
+            "repetitions_unit", "repetitions_rounding", "rir", "max_rir", "rpe", "rest",
+            "max_rest", "type", "text_repr", "comment"
+        ]
+    }
+    | .components.schemas.WorkoutSlotPlan = {
+        "type": "object",
+        "properties": {
+            "comment": {"type": "string"},
+            "is_superset": {"type": "boolean"},
+            "exercises": {"type": "array", "items": {"type": "integer"}},
+            "sets": {
+                "type": "array",
+                "items": {"$ref": "#/components/schemas/WorkoutSetPlan"}
+            }
+        },
+        "required": ["comment", "is_superset", "exercises", "sets"]
+    }
+    | .components.schemas.WorkoutDayPlan = {
+        "type": "object",
+        "properties": {
+            "iteration": {"type": "integer"},
+            "date": {"type": "string", "format": "date"},
+            "label": {"type": "string"},
+            "day": {"$ref": "#/components/schemas/Day"},
+            "slots": {
+                "type": "array",
+                "items": {"$ref": "#/components/schemas/WorkoutSlotPlan"}
+            }
+        },
+        "required": ["iteration", "date", "label", "day", "slots"]
+    }
+    | .paths["/api/v2/routine/{id}/date-sequence-gym/"]
+        .get.responses["200"].content["application/json"].schema = {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/WorkoutDayPlan"}
+        }
     |
     del(
         .paths["/api/v2/exerciseimage/"].post,
@@ -77,6 +145,15 @@ if ! jq -e '
     and .components.schemas.IngredientThumbnails.required == ["small", "medium"]
 ' "$output_schema" >/dev/null; then
     echo "Ingredient image nullability normalization failed" >&2
+    exit 1
+fi
+
+if ! jq -e '
+    (.paths["/api/v2/routine/{id}/date-sequence-gym/"]
+        .get.responses["200"].content["application/json"].schema.type == "array")
+    and (.components.schemas.WorkoutSetPlan.required | index("slot_entry_id") != null)
+' "$output_schema" >/dev/null; then
+    echo "Workout day response normalization failed" >&2
     exit 1
 fi
 
