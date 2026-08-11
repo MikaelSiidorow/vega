@@ -159,6 +159,9 @@ nonisolated enum WebAuthenticationHandoff {
             url: instance.appending(path: "user/app-auth/"),
             resolvingAgainstBaseURL: false
         )!
+        if !components.path.hasSuffix("/") {
+            components.path += "/"
+        }
         components.queryItems = [URLQueryItem(name: "state", value: state)]
         return WebAuthenticationRequest(instance: instance, url: components.url!, state: state)
     }
