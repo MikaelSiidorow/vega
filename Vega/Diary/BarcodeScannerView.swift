@@ -143,7 +143,7 @@ struct BarcodeScannerView: View {
         VStack(spacing: 12) {
             Text(scannerMessage ?? "Center the product barcode in the frame.")
                 .multilineTextAlignment(.center)
-                .foregroundStyle(scannerMessage == nil ? .primary : .red)
+                .foregroundStyle(scannerMessage == nil ? Color.primary : Color.red)
             Button("Enter code manually") {
                 phase = .manual
             }
