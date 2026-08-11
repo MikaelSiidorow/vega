@@ -72,6 +72,9 @@ actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntry
     func searchIngredients(query: String) -> [WgerIngredient] {
         let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard normalized.count >= 2 else { return [] }
+        if normalized == "5901234123457" {
+            return ingredientCatalog.filter { $0.id == 4 }
+        }
         return ingredientCatalog.filter {
             $0.name.lowercased().contains(normalized)
                 || $0.brand?.lowercased().contains(normalized) == true

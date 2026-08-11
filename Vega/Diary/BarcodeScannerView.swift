@@ -7,6 +7,17 @@ enum BarcodeScannerMode: Equatable {
     case fixture(ProductBarcode)
 }
 
+private struct BarcodeScannerModeKey: EnvironmentKey {
+    static let defaultValue = BarcodeScannerMode.camera
+}
+
+extension EnvironmentValues {
+    var barcodeScannerMode: BarcodeScannerMode {
+        get { self[BarcodeScannerModeKey.self] }
+        set { self[BarcodeScannerModeKey.self] = newValue }
+    }
+}
+
 struct BarcodeScannerView: View {
     let mode: BarcodeScannerMode
     let onScan: (ProductBarcode) -> Void
