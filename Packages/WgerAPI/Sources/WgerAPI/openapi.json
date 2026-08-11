@@ -8971,7 +8971,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NutritionPlan"
+                  "$ref": "#/components/schemas/NutritionalValues"
                 }
               }
             },

@@ -30,6 +30,12 @@ jq '
         "nullable": true,
         "readOnly": true
     }
+    # The custom action uses NutritionalValuesSerializer, but schema generation
+    # infers the viewset default NutritionPlan serializer.
+    | .paths["/api/v2/nutritionplan/{id}/nutritional_values/"]
+        .get.responses["200"].content["application/json"].schema = {
+            "$ref": "#/components/schemas/NutritionalValues"
+        }
     |
     del(
         .paths["/api/v2/exerciseimage/"].post,
@@ -71,6 +77,15 @@ if ! jq -e '
     and .components.schemas.IngredientThumbnails.required == ["small", "medium"]
 ' "$output_schema" >/dev/null; then
     echo "Ingredient image nullability normalization failed" >&2
+    exit 1
+fi
+
+if ! jq -e '
+    .paths["/api/v2/nutritionplan/{id}/nutritional_values/"]
+        .get.responses["200"].content["application/json"].schema."$ref"
+        == "#/components/schemas/NutritionalValues"
+' "$output_schema" >/dev/null; then
+    echo "Nutrition plan values response normalization failed" >&2
     exit 1
 fi
 
