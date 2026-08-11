@@ -54,11 +54,9 @@ nonisolated struct AuthenticationTests {
         let instance = try InstanceURL("https://wger.example")
         let request = WebAuthenticationHandoff.makeRequest(instance: instance)
 
-        #expect(request.url.host() == "wger.example")
-        #expect(request.url.absoluteString.hasPrefix("https://wger.example/user/app-auth/?"))
         #expect(
-            URLComponents(url: request.url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "state" })?.value == request.state
+            request.url.absoluteString
+                == "https://wger.example/user/app-auth/?state=\(request.state)"
         )
 
         let callback = try #require(
