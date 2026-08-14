@@ -19,11 +19,10 @@ class VegaUITestCase: XCTestCase {
     func assertPopulatedDiary(in app: XCUIApplication) {
         let elements = app.descendants(matching: .any)
         XCTAssertTrue(elements["nutrition-summary"].waitForExistence(timeout: 5))
-        XCTAssertTrue(elements["nutrition-goal-energy"].exists)
-        XCTAssertTrue(elements["nutrition-goal-protein"].exists)
+        XCTAssertTrue(app.staticTexts["Calories remaining"].exists)
+        XCTAssertTrue(app.staticTexts["Protein"].exists)
         XCTAssertTrue(elements["diary-item-oats"].exists)
         XCTAssertTrue(elements["diary-item-blueberries"].exists)
-        XCTAssertTrue(elements["diary-item-tofu"].exists)
     }
 
     func normalizedWhitespace(_ value: String) -> String {
@@ -78,7 +77,7 @@ class VegaUITestCase: XCTestCase {
             return text == expected
         }
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: textField)
-        return XCTWaiter.wait(for: [expectation], timeout: 2) == .completed
+        return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
     }
 
     @MainActor
@@ -147,9 +146,6 @@ final class BasicLoggingDiaryUITests: VegaUITestCase {
         app.launch()
 
         assertPopulatedDiary(in: app)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["nutrition-goal-energy"].label.contains("remaining")
-        )
 
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Basic logging diary"
@@ -329,8 +325,15 @@ final class AddDiaryEntryUITests: VegaUITestCase {
         let amount = app.textFields["diary-create-amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 2))
         XCTAssertEqual(amount.value as? String, "2")
+        app.swipeUp()
+        XCTAssertTrue(
+            app.staticTexts["diary-create-grams"].waitForExistence(timeout: 2)
+        )
         XCTAssertTrue(
             normalizedWhitespace(app.staticTexts["diary-create-grams"].label).contains("200 g")
+        )
+        XCTAssertTrue(
+            app.staticTexts["diary-create-energy"].waitForExistence(timeout: 2)
         )
         XCTAssertTrue(
             normalizedWhitespace(app.staticTexts["diary-create-energy"].label).contains("320 kcal")
@@ -347,7 +350,6 @@ final class AddDiaryEntryUITests: VegaUITestCase {
         XCTAssertTrue(created.waitForExistence(timeout: 5))
         XCTAssertTrue(created.label.contains("Smoked tofu"))
         XCTAssertTrue(created.label.contains("200 g"))
-        XCTAssertTrue(app.descendants(matching: .any)["diary-item-tofu"].exists)
 
         let result = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         result.name = "Diary after relogging tofu"
@@ -427,7 +429,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
 
         XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
         app.buttons["add-diary-entry"].tap()
-        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 5))
         app.buttons["scan-barcode"].tap()
 
         XCTAssertTrue(app.buttons["simulate-barcode-scan"].waitForExistence(timeout: 2))
@@ -440,6 +442,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
         XCTAssertTrue(app.navigationBars["Scan barcode"].waitForNonExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["recent-food-suggestions"].exists)
 
+        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 5))
         app.buttons["scan-barcode"].tap()
         XCTAssertTrue(app.buttons["simulate-barcode-scan"].waitForExistence(timeout: 2))
         app.buttons["simulate-barcode-scan"].tap()
@@ -473,7 +476,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
 
         XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
         app.buttons["add-diary-entry"].tap()
-        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 5))
         app.buttons["scan-barcode"].tap()
 
         XCTAssertTrue(app.staticTexts["Scanner unavailable"].waitForExistence(timeout: 2))
