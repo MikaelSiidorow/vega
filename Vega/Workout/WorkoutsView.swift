@@ -7,6 +7,7 @@ struct WorkoutsView: View {
     let signOut: () -> Void
 
     @State private var editor: WorkoutSetEditorContext?
+    @State private var activeSession: WorkoutSessionPlan?
     @State private var pendingDeletion: WorkoutSetLog?
 
     var body: some View {
@@ -40,7 +41,11 @@ struct WorkoutsView: View {
         }
         .task { await model.load() }
         .sheet(item: $editor) { context in
-            WorkoutSetForm(context: context) { input in
+            WorkoutSetForm(
+                context: context,
+                weightUnits: model.dashboard?.weightUnits ?? [],
+                repetitionUnits: model.dashboard?.repetitionUnits ?? []
+            ) { input in
                 let didSave: Bool
                 if let log = context.log {
                     didSave = await model.updateSet(id: log.id, input: input)
@@ -51,6 +56,14 @@ struct WorkoutsView: View {
                 if didSave { editor = nil }
                 return didSave
             }
+        }
+        .fullScreenCover(item: $activeSession) { session in
+            WorkoutSessionView(
+                model: model,
+                session: session,
+                weightUnits: model.dashboard?.weightUnits ?? [],
+                repetitionUnits: model.dashboard?.repetitionUnits ?? []
+            )
         }
         .alert(
             "Delete this set?",
@@ -98,8 +111,31 @@ struct WorkoutsView: View {
                         } else {
                             todayHeader(today)
                             ForEach(today.exercises) { plan in
-                                exercisePlan(plan, day: today, logs: dashboard.logs)
+                                exercisePlan(
+                                    plan,
+                                    day: today,
+                                    logs: dashboard.logs,
+                                    weightUnits: dashboard.weightUnits,
+                                    repetitionUnits: dashboard.repetitionUnits
+                                )
                             }
+                            Button {
+                                activeSession = WorkoutSessionPlan(
+                                    day: today,
+                                    logs: dashboard.logs
+                                )
+                            } label: {
+                                Label(
+                                    WorkoutSessionPlan(day: today, logs: dashboard.logs).isComplete
+                                        ? "Review workout" : "Start workout",
+                                    systemImage: "play.fill"
+                                )
+                                .labelStyle(.titleAndIcon)
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
+                            .accessibilityIdentifier("start-workout")
                         }
                     } else {
                         ContentUnavailableView(
@@ -152,7 +188,9 @@ struct WorkoutsView: View {
     private func exercisePlan(
         _ plan: WorkoutExercisePlan,
         day: PlannedWorkoutDay,
-        logs: [WorkoutSetLog]
+        logs: [WorkoutSetLog],
+        weightUnits: [WorkoutWeightUnit],
+        repetitionUnits: [WorkoutRepetitionUnit]
     ) -> some View {
         let completed = logs.filter { $0.slotEntryID == plan.slotEntryID }
         return VStack(alignment: .leading, spacing: 10) {
@@ -191,9 +229,15 @@ struct WorkoutsView: View {
                     Label("Set \(index + 1)", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Spacer()
-                    Text(logDescription(log))
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("workout-log-\(log.id)")
+                    Text(
+                        logDescription(
+                            log,
+                            weightUnits: weightUnits,
+                            repetitionUnits: repetitionUnits
+                        )
+                    )
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("workout-log-\(log.id)")
                     Button("Edit set", systemImage: "pencil") {
                         editor = WorkoutSetEditorContext(day: day, plan: plan, log: log)
                     }
@@ -210,19 +254,19 @@ struct WorkoutsView: View {
                     .accessibilityIdentifier("delete-workout-log-\(log.id)")
                 }
             }
-            if completed.count < plan.setCount {
-                Button("Log set", systemImage: "plus.circle.fill") {
-                    editor = WorkoutSetEditorContext(day: day, plan: plan, log: nil)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("log-workout-set-\(plan.slotEntryID)")
-            }
         }
         .padding(.vertical, 5)
     }
 
-    private func logDescription(_ log: WorkoutSetLog) -> String {
-        "\(log.repetitions ?? "—") reps · \(log.weight ?? "—") kg"
+    private func logDescription(
+        _ log: WorkoutSetLog,
+        weightUnits: [WorkoutWeightUnit],
+        repetitionUnits: [WorkoutRepetitionUnit]
+    ) -> String {
+        let repetitionUnit =
+            repetitionUnits.first { $0.id == log.repetitionsUnitID }?.name ?? "reps"
+        let weightUnit = weightUnits.first { $0.id == log.weightUnitID }?.name ?? "kg"
+        return "\(log.repetitions ?? "—") \(repetitionUnit) · \(log.weight ?? "—") \(weightUnit)"
     }
 }
 
@@ -276,82 +320,57 @@ private struct WorkoutSetEditorContext: Identifiable {
 
 private struct WorkoutSetForm: View {
     let context: WorkoutSetEditorContext
+    let weightUnits: [WorkoutWeightUnit]
+    let repetitionUnits: [WorkoutRepetitionUnit]
     let save: (WorkoutSetInput) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
-    @State private var repetitions: String
-    @State private var weight: String
-    @State private var isSaving = false
 
     init(
         context: WorkoutSetEditorContext,
+        weightUnits: [WorkoutWeightUnit],
+        repetitionUnits: [WorkoutRepetitionUnit],
         save: @escaping (WorkoutSetInput) async -> Bool
     ) {
         self.context = context
+        self.weightUnits = weightUnits
+        self.repetitionUnits = repetitionUnits
         self.save = save
-        _repetitions = State(
-            initialValue: context.log?.repetitions ?? context.plan.targetRepetitions ?? "")
-        _weight = State(initialValue: context.log?.weight ?? context.plan.targetWeight ?? "")
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    LabeledContent("Exercise", value: context.plan.name)
-                    LabeledContent("Target", value: context.plan.prescription)
+            ScrollView {
+                VStack(alignment: .leading, spacing: VegaSpacing.spacious) {
+                    VStack(alignment: .leading, spacing: VegaSpacing.small) {
+                        Text(context.plan.name)
+                            .font(.title2.weight(.bold))
+                        LabeledContent("Target", value: context.plan.prescription)
+                    }
+                    .vegaCard()
+
+                    WorkoutSetEntryForm(
+                        plan: context.plan,
+                        previousLog: context.log,
+                        suggestedInput: nil,
+                        weightUnits: weightUnits,
+                        repetitionUnits: repetitionUnits,
+                        submitTitle: "Save changes",
+                        submitSystemImage: "checkmark"
+                    ) { input in
+                        await save(input)
+                    }
                 }
-                Section("Completed set") {
-                    TextField("Repetitions", text: $repetitions)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("workout-repetitions")
-                    TextField("Weight (kg)", text: $weight)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("workout-weight")
-                }
+                .padding(VegaSpacing.comfortable)
             }
-            .navigationTitle(context.log == nil ? "Log set" : "Edit set")
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("Edit set")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        isSaving = true
-                        Task {
-                            _ = await save(
-                                WorkoutSetInput(
-                                    repetitions: normalized(repetitions),
-                                    weight: normalized(weight)
-                                )
-                            )
-                            isSaving = false
-                        }
-                    }
-                    .disabled(!isValid || isSaving)
-                    .accessibilityIdentifier("save-workout-set")
-                }
             }
-            .interactiveDismissDisabled(isSaving)
         }
-    }
-
-    private var isValid: Bool {
-        guard let repetitions = decimal(repetitions), repetitions > 0,
-            let weight = decimal(weight), weight >= 0
-        else { return false }
-        return true
-    }
-
-    private func decimal(_ value: String) -> Decimal? {
-        Decimal(string: normalized(value), locale: Locale(identifier: "en_US_POSIX"))
-    }
-
-    private func normalized(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(
-            of: ",",
-            with: "."
-        )
     }
 }

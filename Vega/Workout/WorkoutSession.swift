@@ -14,7 +14,9 @@ nonisolated struct WorkoutSetStep: Equatable, Identifiable, Sendable {
     let previousLog: WorkoutSetLog?
 }
 
-nonisolated struct WorkoutSessionPlan: Equatable, Sendable {
+nonisolated struct WorkoutSessionPlan: Equatable, Identifiable, Sendable {
+    var id: String { day.id }
+
     let day: PlannedWorkoutDay
     let completedLogsBySlot: [Int: [WorkoutSetLog]]
     let pendingSteps: [WorkoutSetStep]
