@@ -147,7 +147,9 @@ final class BasicLoggingDiaryUITests: VegaUITestCase {
         app.launch()
 
         assertPopulatedDiary(in: app)
-        XCTAssertTrue(app.staticTexts["Configured goals"].exists)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["nutrition-goal-energy"].label.contains("remaining")
+        )
 
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Basic logging diary"
@@ -164,7 +166,7 @@ final class PlannedMealsDiaryUITests: VegaUITestCase {
         app.launch()
 
         assertPopulatedDiary(in: app)
-        XCTAssertTrue(app.staticTexts["Planned meals"].exists)
+        XCTAssertTrue(app.staticTexts["Planned meal targets"].exists)
 
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Planned meals diary"
