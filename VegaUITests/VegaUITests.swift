@@ -47,21 +47,21 @@ class VegaUITestCase: XCTestCase {
         using app: XCUIApplication,
         placeholder: String
     ) {
-        let keyboard = app.keyboards.firstMatch
-        var current = textFieldText(textField, placeholder: placeholder)
-        while !current.isEmpty {
-            let expected = String(current.dropLast())
-            keyboard.keys["Delete"].tap()
-            XCTAssertTrue(waitForText(expected, in: textField, placeholder: placeholder))
-            current = expected
+        if !app.keyboards.firstMatch.exists {
+            focus(textField, in: app)
+        }
+        let current = textFieldText(textField, placeholder: placeholder)
+        if !current.isEmpty {
+            textField.typeText(
+                String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count)
+            )
+            XCTAssertTrue(waitForText("", in: textField, placeholder: placeholder))
         }
 
         for character in replacement {
-            let expected = current + String(character)
-            keyboard.keys[String(character)].tap()
-            XCTAssertTrue(waitForText(expected, in: textField, placeholder: placeholder))
-            current = expected
+            textField.typeText(String(character))
         }
+        XCTAssertTrue(waitForText(replacement, in: textField, placeholder: placeholder))
     }
 
     @MainActor
@@ -500,9 +500,11 @@ final class BarcodeScannerUITests: VegaUITestCase {
         fallback.lifetime = .keepAlways
         add(fallback)
 
-        code.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
-        code.typeText("5901234123457")
-        XCTAssertTrue(app.buttons["submit-manual-barcode"].isEnabled)
+        replaceText("12345678", in: code, using: app, placeholder: "EAN, UPC, or GTIN")
+        XCTAssertTrue(
+            app.buttons["submit-manual-barcode"]
+                .waitForExistence(timeout: 2) && app.buttons["submit-manual-barcode"].isEnabled
+        )
         app.buttons["submit-manual-barcode"].tap()
         XCTAssertTrue(app.buttons["ingredient-result-4"].waitForExistence(timeout: 5))
     }
@@ -609,13 +611,8 @@ final class AppShellUITests: VegaUITestCase {
 
 final class WorkoutUITests: VegaUITestCase {
     @MainActor
-    func testBrowsesRoutineAndRecordsCorrectsAndDeletesSet() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
-        app.launch()
-
-        XCTAssertTrue(app.tabBars.buttons["Workouts"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Workouts"].tap()
+    func testBrowsesRoutineAndCorrectsAndDeletesSet() throws {
+        let app = launchWorkoutFixture()
         XCTAssertTrue(app.descendants(matching: .any)["today-workout"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["workout-exercise-7"].exists)
         capture("Today's workout")
@@ -624,17 +621,21 @@ final class WorkoutUITests: VegaUITestCase {
         app.buttons["edit-workout-log-fixture-log-2"].tap()
         let repetitions = app.textFields["workout-repetitions"]
         XCTAssertTrue(repetitions.waitForExistence(timeout: 2))
-        focus(repetitions, in: app)
-        replaceText("12", in: repetitions, using: app, placeholder: "Repetitions")
+        for _ in 0..<4 {
+            app.buttons["Increase repetitions"].tap()
+        }
+        XCTAssertEqual(repetitions.value as? String, "12")
         let weight = app.textFields["workout-weight"]
-        focus(weight, in: app)
-        replaceText("47.5", in: weight, using: app, placeholder: "Weight (kg)")
+        for _ in 0..<5 {
+            app.buttons["Decrease weight"].tap()
+        }
+        XCTAssertEqual(weight.value as? String, "47.5")
         capture("Edit workout set")
         app.buttons["save-workout-set"].tap()
         XCTAssertTrue(repetitions.waitForNonExistence(timeout: 5))
         XCTAssertTrue(edited.waitForExistence(timeout: 5))
         let updated = app.staticTexts.matching(identifier: "workout-log-fixture-log-2")
-            .matching(NSPredicate(format: "label CONTAINS %@", "12 reps · 47.5 kg"))
+            .matching(NSPredicate(format: "label CONTAINS %@", "12 Repetitions · 47.5 kg"))
             .firstMatch
         XCTAssertTrue(updated.waitForExistence(timeout: 5))
 
@@ -649,20 +650,6 @@ final class WorkoutUITests: VegaUITestCase {
         XCTAssertTrue(deleted.waitForNonExistence(timeout: 5))
         capture("Workout after deleting set")
 
-        let logSet = app.buttons["log-workout-set-8"]
-        XCTAssertTrue(logSet.waitForExistence(timeout: 2))
-        if !logSet.isHittable { app.swipeUp() }
-        logSet.tap()
-        XCTAssertTrue(app.textFields["workout-repetitions"].waitForExistence(timeout: 2))
-        capture("Log workout set")
-        app.buttons["save-workout-set"].tap()
-        XCTAssertTrue(
-            app.textFields["workout-repetitions"].waitForNonExistence(timeout: 5))
-
-        let created = app.descendants(matching: .any)["workout-log-fixture-log-3"]
-        XCTAssertTrue(created.waitForExistence(timeout: 5))
-        capture("Workout after recording set")
-
         let routine = app.descendants(matching: .any)["workout-routine-42"]
         for _ in 0..<3 where !routine.isHittable {
             app.swipeUp()
@@ -670,5 +657,76 @@ final class WorkoutUITests: VegaUITestCase {
         routine.tap()
         XCTAssertTrue(app.descendants(matching: .any)["routine-plan"].waitForExistence(timeout: 2))
         capture("Workout routine plan")
+    }
+
+    @MainActor
+    func testCompletesFocusedWorkout() throws {
+        let app = launchWorkoutFixture()
+        let start = app.buttons["start-workout"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        if !start.isHittable { app.swipeUp() }
+        start.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["workout-session-overview"]
+                .waitForExistence(timeout: 2))
+        capture("Focused workout overview")
+        app.buttons["begin-workout"].tap()
+
+        XCTAssertTrue(app.textFields["workout-repetitions"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Repetitions"].exists)
+        XCTAssertTrue(app.staticTexts["Weight"].exists)
+        capture("Focused workout current set")
+
+        app.buttons["workout-weight-unit"].tap()
+        XCTAssertTrue(app.buttons["Body Weight"].waitForExistence(timeout: 2))
+        app.buttons["Body Weight"].tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["workout-weight"].waitForExistence(timeout: 2))
+        capture("Focused workout bodyweight shortcut")
+        app.buttons["workout-weight-unit"].tap()
+        app.buttons["kg"].tap()
+
+        for setIndex in 0..<4 {
+            let save = app.buttons["save-workout-set"]
+            XCTAssertTrue(save.waitForExistence(timeout: 2))
+            save.tap()
+
+            if setIndex < 3 {
+                XCTAssertTrue(
+                    app.staticTexts["workout-rest"]
+                        .waitForExistence(timeout: 5))
+                if setIndex == 0 { capture("Focused workout rest timer") }
+                let restAction = app.buttons["advance-workout-after-rest"]
+                XCTAssertTrue(restAction.waitForExistence(timeout: 2))
+                XCTAssertEqual(restAction.label, "Skip rest")
+                restAction.tap()
+                XCTAssertTrue(
+                    app.buttons["save-workout-set"].waitForExistence(timeout: 2))
+            }
+        }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["workout-session-summary"]
+                .waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["workout-summary-exercise-7"].exists)
+        let firstSummarySet =
+            app.descendants(matching: .any)["workout-summary-set-7-1"]
+        XCTAssertTrue(firstSummarySet.exists)
+        XCTAssertTrue(firstSummarySet.label.contains("8 Repetitions · 60 kg"))
+        capture("Focused workout summary")
+        app.buttons["finish-workout"].tap()
+        XCTAssertTrue(app.buttons["start-workout"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    private func launchWorkoutFixture() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Workouts"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Workouts"].tap()
+        return app
     }
 }
