@@ -794,36 +794,88 @@ private struct NutritionSummary: View {
     let totals: NutritionTotals
     let goal: NutritionGoalState
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: VegaSpacing.comfortable) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Daily progress")
-                    .font(.headline)
+                    .font(.title3.weight(.bold))
                 Spacer()
-                Text(goalDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("nutrition-goal-source")
+                if let goalDescription {
+                    Text(goalDescription)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("nutrition-goal-source")
+                }
             }
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-                nutrient("Energy", value: totals.energy, target: targets?.energy, unit: "kcal")
-                nutrient("Protein", value: totals.protein, target: targets?.protein, unit: "g")
-                nutrient(
-                    "Carbs",
-                    value: totals.carbohydrates,
-                    target: targets?.carbohydrates,
-                    unit: "g"
-                )
-                nutrient("Fat", value: totals.fat, target: targets?.fat, unit: "g")
+
+            energySummary
+
+            Divider()
+
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: VegaSpacing.comfortable) {
+                    macroSummaries
+                }
+            } else {
+                HStack(alignment: .top, spacing: VegaSpacing.standard) {
+                    macroSummaries
+                }
             }
         }
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal)
+        .vegaCard(padding: VegaSpacing.comfortable)
         .padding(.vertical, 6)
         .accessibilityIdentifier("nutrition-summary")
+    }
+
+    private var energySummary: some View {
+        let target = targets?.energy
+        let difference = target.map { $0 - totals.energy }
+        let displayValue = difference.map { abs($0) } ?? totals.energy
+
+        return VStack(alignment: .leading, spacing: VegaSpacing.small) {
+            Text(energyTitle(difference: difference))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: VegaSpacing.small) {
+                Text(displayValue, format: .number.precision(.fractionLength(0...1)))
+                    .font(.largeTitle.bold().monospacedDigit())
+                Text("kcal")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let target {
+                VegaProgressBar(
+                    value: progress(value: totals.energy, target: target),
+                    tint: progressTint(value: totals.energy, target: target),
+                    height: 10
+                )
+
+                HStack {
+                    Text(
+                        "\(totals.energy.formatted(.number.precision(.fractionLength(0...1)))) consumed"
+                    )
+                    Spacer()
+                    Text(
+                        "\(target.formatted(.number.precision(.fractionLength(0...1)))) goal"
+                    )
+                }
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier("nutrition-goal-energy")
+        .accessibilityLabel(energyAccessibilityLabel(target: target))
+    }
+
+    @ViewBuilder private var macroSummaries: some View {
+        macro("Protein", value: totals.protein, target: targets?.protein)
+        macro("Carbs", value: totals.carbohydrates, target: targets?.carbohydrates)
+        macro("Fat", value: totals.fat, target: targets?.fat)
     }
 
     private var targets: NutritionTargets? {
@@ -831,55 +883,69 @@ private struct NutritionSummary: View {
         return targets
     }
 
-    private var goalDescription: String {
+    private var goalDescription: String? {
         switch goal {
         case .missingPlan:
             "No nutrition plan"
         case .available(_, .configured):
-            "Configured goals"
+            nil
         case .available(_, .plannedMeals):
-            "Planned meals"
+            "Planned meal targets"
         case .unavailable:
             "Targets unavailable"
         }
     }
 
-    private func nutrient(
+    private func macro(
         _ name: String,
         value: Decimal,
-        target: Decimal?,
-        unit: String
+        target: Decimal?
     ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(name)
-                    .font(.caption.weight(.medium))
-                Spacer(minLength: 4)
+        VStack(alignment: .leading, spacing: VegaSpacing.small) {
+            Text(name)
+                .font(.subheadline.weight(.semibold))
+
+            HStack(alignment: .firstTextBaseline, spacing: VegaSpacing.compact) {
                 Text(value, format: .number.precision(.fractionLength(0...1)))
-                    .font(.caption.monospacedDigit())
-                if let target {
-                    Text("/ \(target.formatted(.number.precision(.fractionLength(0...1)))) \(unit)")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(unit)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                Text("g")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-            ProgressView(value: progress(value: value, target: target))
-                .tint(progressTint(value: value, target: target))
-            Text(status(value: value, target: target, unit: unit))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+
+            if let target {
+                Text("of \(target.formatted(.number.precision(.fractionLength(0...1)))) g")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                VegaProgressBar(
+                    value: progress(value: value, target: target),
+                    tint: progressTint(value: value, target: target),
+                    height: 6
+                )
+            } else {
+                Text("No target")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("nutrition-goal-\(name.lowercased())")
         .accessibilityLabel(
-            "\(name), \(value.formatted()) \(unit), \(status(value: value, target: target, unit: unit))"
+            "\(name), \(value.formatted()) grams, \(status(value: value, target: target, unit: "grams"))"
         )
+    }
+
+    private func energyTitle(difference: Decimal?) -> String {
+        guard let difference else { return "Calories logged" }
+        return difference >= 0 ? "Calories remaining" : "Calories over target"
+    }
+
+    private func energyAccessibilityLabel(target: Decimal?) -> String {
+        guard let target else { return "Calories, \(totals.energy.formatted()) logged" }
+        return
+            "Calories, \(totals.energy.formatted()) consumed, \(status(value: totals.energy, target: target, unit: "kilocalories"))"
     }
 
     private func progress(value: Decimal, target: Decimal?) -> Double {
