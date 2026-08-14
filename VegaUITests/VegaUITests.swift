@@ -489,7 +489,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
         app.buttons["manual-barcode-fallback"].tap()
         let code = app.textFields["manual-barcode-code"]
         XCTAssertTrue(code.waitForExistence(timeout: 2))
-        code.tap()
+        focus(code, in: app)
         code.typeText("1234")
         XCTAssertTrue(
             app.staticTexts["Enter an 8-, 12-, 13-, or 14-digit product code."]
