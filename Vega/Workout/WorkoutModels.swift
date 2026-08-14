@@ -80,14 +80,14 @@ nonisolated struct WorkoutSetLog: Equatable, Identifiable, Sendable {
 }
 
 nonisolated struct WorkoutSetInput: Equatable, Sendable {
-    let repetitions: String
-    let weight: String
+    let repetitions: String?
+    let weight: String?
     let repetitionsUnitID: Int?
     let weightUnitID: Int?
 
     init(
-        repetitions: String,
-        weight: String,
+        repetitions: String?,
+        weight: String?,
         repetitionsUnitID: Int? = nil,
         weightUnitID: Int? = nil
     ) {

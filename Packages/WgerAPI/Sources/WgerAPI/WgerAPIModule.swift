@@ -178,8 +178,8 @@ public enum WgerAPIModule {
         serverURL: URL,
         accessToken: String,
         id: String,
-        repetitions: String,
-        weight: String,
+        repetitions: String?,
+        weight: String?,
         repetitionsUnit: Int?,
         weightUnit: Int?
     ) async throws -> Components.Schemas.WorkoutLog {
