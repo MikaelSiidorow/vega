@@ -44,6 +44,7 @@ actor SessionCoordinator: SessionCoordinating {
         try await credentialStore.save(
             StoredSession(
                 instanceAddress: instance.url.absoluteString,
+                accessToken: credentials.accessToken,
                 refreshToken: refreshToken
             )
         )
@@ -59,6 +60,18 @@ actor SessionCoordinator: SessionCoordinating {
         } catch {
             try? await clear()
             throw error
+        }
+
+        if let accessToken = storedSession.accessToken {
+            let restored = ActiveSession(
+                instance: instance,
+                credentials: AuthenticationSession(
+                    accessToken: accessToken,
+                    refreshToken: storedSession.refreshToken
+                )
+            )
+            activeSession = restored
+            return restored
         }
 
         return try await refresh(
@@ -109,6 +122,7 @@ actor SessionCoordinator: SessionCoordinating {
             try await credentialStore.save(
                 StoredSession(
                     instanceAddress: instance.url.absoluteString,
+                    accessToken: credentials.accessToken,
                     refreshToken: rotatedRefreshToken
                 )
             )

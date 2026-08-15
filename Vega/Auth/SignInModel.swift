@@ -194,17 +194,22 @@ final class SignInModel {
             guard let activeSession = try await sessionCoordinator.restore() else { return }
             let instance = activeSession.instance
             let refreshedSession = activeSession.credentials
-            let planCount = try await connectionChecker.nutritionPlanCount(
-                instance: instance,
-                session: refreshedSession
-            )
 
             session = refreshedSession
             connectedAccount = ConnectedAccount(
                 instance: instance,
-                nutritionPlanCount: planCount
+                nutritionPlanCount: 0
             )
             instanceAddress = instance.url.absoluteString
+            if let planCount = try? await connectionChecker.nutritionPlanCount(
+                instance: instance,
+                session: refreshedSession
+            ) {
+                connectedAccount = ConnectedAccount(
+                    instance: instance,
+                    nutritionPlanCount: planCount
+                )
+            }
         } catch AuthenticationError.expiredSession {
             session = nil
             connectedAccount = nil
