@@ -32,16 +32,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Cache Swift packages and build products
+      - name: Cache Swift packages
         uses: actions/cache@v6
         with:
           path: |
-            ${{ runner.temp }}/DerivedData/Build
-            ${{ runner.temp }}/DerivedData/ModuleCache.noindex
             ${{ runner.temp }}/SourcePackages
             ~/Library/Caches/org.swift.swiftpm
           key: >-
-            vega-macos-26-arm64-xcode-26.6-${{
+            vega-packages-v1-macos-26-arm64-xcode-26.6-${{
             hashFiles(
               'Vega.xcodeproj/project.pbxproj',
               'Vega.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved',
@@ -90,16 +88,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Cache Swift packages and build products
+      - name: Cache Swift packages
         uses: actions/cache@v6
         with:
           path: |
-            ${{ runner.temp }}/DerivedData/Build
-            ${{ runner.temp }}/DerivedData/ModuleCache.noindex
             ${{ runner.temp }}/SourcePackages
             ~/Library/Caches/org.swift.swiftpm
           key: >-
-            vega-macos-26-arm64-xcode-26.6-${{
+            vega-packages-v1-macos-26-arm64-xcode-26.6-${{
             hashFiles(
               'Vega.xcodeproj/project.pbxproj',
               'Vega.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved',
@@ -109,7 +105,7 @@ jobs:
             )
             }}-ui
           restore-keys: >-
-            vega-macos-26-arm64-xcode-26.6-${{
+            vega-packages-v1-macos-26-arm64-xcode-26.6-${{
             hashFiles(
               'Vega.xcodeproj/project.pbxproj',
               'Vega.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved',
