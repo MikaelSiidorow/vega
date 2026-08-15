@@ -55,6 +55,23 @@ final class WorkoutScreenModel {
         }
     }
 
+    func observe() async {
+        phase = .loading
+        do {
+            let stream = try await dashboardFetcher.dashboardStream(
+                for: now(),
+                calendar: calendar
+            )
+            for try await dashboard in stream {
+                phase = .loaded(dashboard)
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            phase = .failed(Self.message(for: error))
+        }
+    }
+
     func createSet(
         for plan: WorkoutExercisePlan,
         day: PlannedWorkoutDay,
