@@ -1,8 +1,6 @@
 import Foundation
 
-actor FixtureWorkoutStore: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdating,
-    WorkoutSetDeleting
-{
+actor FixtureWorkoutStore: WorkoutDataStore {
     private var logs: [WorkoutSetLog]
     private var nextID = 3
 

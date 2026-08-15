@@ -3,6 +3,20 @@ import WgerAPI
 
 nonisolated protocol WorkoutDashboardFetching: Sendable {
     func dashboard(for date: Date, calendar: Calendar) async throws -> WorkoutDashboard
+    func dashboardStream(for date: Date, calendar: Calendar) async throws
+        -> AsyncThrowingStream<WorkoutDashboard, Error>
+}
+
+extension WorkoutDashboardFetching {
+    nonisolated func dashboardStream(for date: Date, calendar: Calendar) async throws
+        -> AsyncThrowingStream<WorkoutDashboard, Error>
+    {
+        let value = try await dashboard(for: date, calendar: calendar)
+        return AsyncThrowingStream { continuation in
+            continuation.yield(value)
+            continuation.finish()
+        }
+    }
 }
 
 nonisolated protocol WorkoutSetCreating: Sendable {
@@ -16,6 +30,20 @@ nonisolated protocol WorkoutSetUpdating: Sendable {
 
 nonisolated protocol WorkoutSetDeleting: Sendable {
     func deleteSet(id: String) async throws
+}
+
+nonisolated protocol WorkoutDataStore:
+    WorkoutDashboardFetching,
+    WorkoutSetCreating,
+    WorkoutSetUpdating,
+    WorkoutSetDeleting
+{}
+
+/// The routine scheduler is not part of Wger's PowerSync publication yet.
+/// Implementations fetch just that unsupported structure through REST; Vega
+/// caches it locally and resolves the remaining workout data from PowerSync.
+nonisolated protocol WorkoutStructureFetching: Sendable {
+    func dayPlans(routineIDs: [Int]) async throws -> [Int: [WorkoutDayRecord]]
 }
 
 nonisolated protocol WorkoutTransport: Sendable {
@@ -325,9 +353,7 @@ nonisolated struct WgerWorkoutTransport: WorkoutTransport {
     }
 }
 
-actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdating,
-    WorkoutSetDeleting
-{
+actor WorkoutAPI: WorkoutDataStore, WorkoutStructureFetching {
     private static let pageSize = 100
     private let client: any AuthenticatedRequestExecuting
     private let transport: any WorkoutTransport
@@ -427,6 +453,21 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
                     WorkoutRepetitionUnit(id: $0.id, name: $0.name)
                 }
             )
+        }
+    }
+
+    func dayPlans(routineIDs: [Int]) async throws -> [Int: [WorkoutDayRecord]] {
+        let transport = transport
+        return try await client.perform { instance, session in
+            var result: [Int: [WorkoutDayRecord]] = [:]
+            for routineID in routineIDs {
+                result[routineID] = try await transport.dayPlans(
+                    instance: instance,
+                    session: session,
+                    routineID: routineID
+                )
+            }
+            return result
         }
     }
 
@@ -550,7 +591,7 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
         }
     }
 
-    private static func day(
+    nonisolated static func day(
         _ record: WorkoutDayRecord,
         routine: WorkoutRoutineRecord,
         exercises: [Int: WorkoutExerciseRecord],
@@ -592,7 +633,7 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
         )
     }
 
-    private static func decimal(
+    nonisolated private static func decimal(
         _ value: String?,
         fallback: Decimal,
         field: String
@@ -604,7 +645,7 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
         return parsed
     }
 
-    private static func seconds(_ value: String?) throws -> Int {
+    nonisolated private static func seconds(_ value: String?) throws -> Int {
         let decimal = try decimal(value, fallback: 90, field: "rest")
         let number = NSDecimalNumber(decimal: decimal)
         guard number != .notANumber, number.intValue >= 0 else {
@@ -613,7 +654,8 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
         return number.intValue
     }
 
-    private static func workoutDate(_ value: String, calendar: Calendar) throws -> Date {
+    nonisolated private static func workoutDate(_ value: String, calendar: Calendar) throws -> Date
+    {
         let parts = value.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 3,
             let year = Int(parts[0]),
@@ -630,7 +672,7 @@ actor WorkoutAPI: WorkoutDashboardFetching, WorkoutSetCreating, WorkoutSetUpdati
         return date
     }
 
-    private static func dateKey(_ date: Date, calendar: Calendar) -> String {
+    nonisolated static func dateKey(_ date: Date, calendar: Calendar) -> String {
         let values = calendar.dateComponents([.year, .month, .day], from: date)
         return String(
             format: "%04d-%02d-%02d",
