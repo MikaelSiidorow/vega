@@ -5,9 +5,7 @@ nonisolated enum DiaryFixtureMode: Equatable, Sendable {
     case plannedMeals
 }
 
-actor FixtureDailyDiaryStore: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
-    IngredientSearching, DiaryEntryCreating, RecentDiaryFetching
-{
+actor FixtureDailyDiaryStore: NutritionDataStore, IngredientSearching {
     let mode: DiaryFixtureMode
     private var deletedEntryIDs: Set<String> = []
     private var amountOverrides: [String: (amount: String, weightUnitID: Int?)] = [:]
