@@ -78,13 +78,14 @@ nonisolated struct WgerIngredientWeightUnit: Equatable, Sendable {
 }
 
 nonisolated struct WgerWeightEntry: Equatable, Identifiable, Sendable {
-    let id: Int
+    let id: String
     let date: Date
     let weight: Decimal
 }
 
 nonisolated enum WgerModelError: Error, Equatable, Sendable {
     case invalidWeight(String)
+    case invalidIdentifier(String)
 }
 
 nonisolated struct WgerPage<Value: Sendable>: Sendable {
@@ -165,7 +166,7 @@ extension Components.Schemas.WeightEntry {
             else {
                 throw WgerModelError.invalidWeight(self.weight)
             }
-            return WgerWeightEntry(id: id, date: date, weight: weight)
+            return WgerWeightEntry(id: String(id), date: date, weight: weight)
         }
     }
 }

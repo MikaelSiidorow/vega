@@ -52,15 +52,15 @@ struct WeightHistoryModelTests {
     @Test
     func computesTrailingSevenCalendarDayAverageFromDailyMeans() async throws {
         let entries = try [
-            WgerWeightEntry(id: 1, date: Self.date("2026-08-01T07:00:00Z"), weight: 70),
-            WgerWeightEntry(id: 2, date: Self.date("2026-08-01T19:00:00Z"), weight: 72),
-            WgerWeightEntry(id: 3, date: Self.date("2026-08-02T07:00:00Z"), weight: 71),
-            WgerWeightEntry(id: 4, date: Self.date("2026-08-03T07:00:00Z"), weight: 72),
-            WgerWeightEntry(id: 5, date: Self.date("2026-08-04T07:00:00Z"), weight: 73),
-            WgerWeightEntry(id: 6, date: Self.date("2026-08-05T07:00:00Z"), weight: 74),
-            WgerWeightEntry(id: 7, date: Self.date("2026-08-06T07:00:00Z"), weight: 75),
-            WgerWeightEntry(id: 8, date: Self.date("2026-08-07T07:00:00Z"), weight: 76),
-            WgerWeightEntry(id: 9, date: Self.date("2026-08-08T07:00:00Z"), weight: 84),
+            WgerWeightEntry(id: "1", date: Self.date("2026-08-01T07:00:00Z"), weight: 70),
+            WgerWeightEntry(id: "2", date: Self.date("2026-08-01T19:00:00Z"), weight: 72),
+            WgerWeightEntry(id: "3", date: Self.date("2026-08-02T07:00:00Z"), weight: 71),
+            WgerWeightEntry(id: "4", date: Self.date("2026-08-03T07:00:00Z"), weight: 72),
+            WgerWeightEntry(id: "5", date: Self.date("2026-08-04T07:00:00Z"), weight: 73),
+            WgerWeightEntry(id: "6", date: Self.date("2026-08-05T07:00:00Z"), weight: 74),
+            WgerWeightEntry(id: "7", date: Self.date("2026-08-06T07:00:00Z"), weight: 75),
+            WgerWeightEntry(id: "8", date: Self.date("2026-08-07T07:00:00Z"), weight: 76),
+            WgerWeightEntry(id: "9", date: Self.date("2026-08-08T07:00:00Z"), weight: 84),
         ]
         let store = FixtureWeightStore(entries: entries)
         let now = try Self.date("2026-08-08T12:00:00Z")

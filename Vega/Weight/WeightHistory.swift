@@ -71,7 +71,7 @@ final class WeightHistoryModel {
 
     private(set) var phase: Phase = .idle
     private(set) var entries: [WgerWeightEntry] = []
-    private(set) var mutatingEntryID: Int?
+    private(set) var mutatingEntryID: String?
     private(set) var isCreating = false
     var selectedRange = WeightRange.quarter
     var mutationErrorMessage: String?
@@ -167,6 +167,21 @@ final class WeightHistoryModel {
         }
     }
 
+    func observe() async {
+        if entries.isEmpty { phase = .loading }
+        do {
+            let stream = try await historyFetcher.weightHistoryStream()
+            for try await values in stream {
+                entries = values.sorted { $0.date > $1.date }
+                phase = .loaded
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            phase = .failed(Self.message(for: error))
+        }
+    }
+
     func create(date: Date, weight: String) async -> Bool {
         guard let weight = WeightInput.normalized(weight), !isCreating else { return false }
         isCreating = true
@@ -182,7 +197,7 @@ final class WeightHistoryModel {
         }
     }
 
-    func update(id: Int, date: Date, weight: String) async -> Bool {
+    func update(id: String, date: Date, weight: String) async -> Bool {
         guard let weight = WeightInput.normalized(weight), mutatingEntryID == nil else {
             return false
         }
@@ -199,7 +214,7 @@ final class WeightHistoryModel {
         }
     }
 
-    func delete(id: Int) async {
+    func delete(id: String) async {
         guard mutatingEntryID == nil else { return }
         mutatingEntryID = id
         mutationErrorMessage = nil

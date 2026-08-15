@@ -31,10 +31,10 @@ nonisolated struct WeightAPITests {
 
         let history = try await api.weightHistory()
         try await api.createWeightEntry(date: newest, weight: "80.8")
-        try await api.updateWeightEntry(id: 2, date: middle, weight: "81.2")
-        try await api.deleteWeightEntry(id: 1)
+        try await api.updateWeightEntry(id: "2", date: middle, weight: "81.2")
+        try await api.deleteWeightEntry(id: "1")
 
-        #expect(history.map(\.id) == [3, 2, 1])
+        #expect(history.map(\.id) == ["3", "2", "1"])
         #expect(await transport.offsets == [0, 2])
         #expect(
             await transport.created == WeightMutation(id: nil, date: newest, weight: "80.8")
@@ -55,7 +55,7 @@ nonisolated struct WeightAPITests {
             user: 3
         )
 
-        #expect(try generated.vegaValue == WgerWeightEntry(id: 7, date: date, weight: 80.25))
+        #expect(try generated.vegaValue == WgerWeightEntry(id: "7", date: date, weight: 80.25))
     }
 
     @Test
@@ -73,7 +73,7 @@ nonisolated struct WeightAPITests {
     }
 
     private static func entry(_ id: Int, date: Date, weight: Decimal) -> WgerWeightEntry {
-        WgerWeightEntry(id: id, date: date, weight: weight)
+        WgerWeightEntry(id: String(id), date: date, weight: weight)
     }
 
     private static func date(_ value: String) throws -> Date {
