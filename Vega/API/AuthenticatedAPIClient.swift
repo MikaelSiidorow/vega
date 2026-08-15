@@ -7,6 +7,10 @@ nonisolated protocol AuthenticatedRequestExecuting: Sendable {
     ) async throws -> Value
 }
 
+nonisolated protocol HTTPStatusProviding: Error {
+    var statusCode: Int { get }
+}
+
 actor AuthenticatedAPIClient: AuthenticatedRequestExecuting {
     private let sessionCoordinator: any SessionCoordinating
 
@@ -35,6 +39,9 @@ actor AuthenticatedAPIClient: AuthenticatedRequestExecuting {
     }
 
     private func isUnauthorized(_ error: Error) -> Bool {
+        if let statusError = error as? any HTTPStatusProviding {
+            return statusError.statusCode == 401
+        }
         guard let apiError = error as? WgerAPIError else { return false }
         return apiError == .unexpectedStatus(401)
     }

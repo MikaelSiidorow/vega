@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		A10000000000000000000001 /* WgerAPI in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000002 /* WgerAPI */; };
+		A30000000000000000000001 /* PowerSync in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000003 /* PowerSync */; };
+		A30000000000000000000004 /* PowerSync in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000003 /* PowerSync */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +61,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000001 /* WgerAPI in Frameworks */,
+				A30000000000000000000001 /* PowerSync in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A30000000000000000000004 /* PowerSync in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +134,7 @@
 			name = Vega;
 			packageProductDependencies = (
 				A10000000000000000000002 /* WgerAPI */,
+				A30000000000000000000003 /* PowerSync */,
 			);
 			productName = Vega;
 			productReference = 73FA623B302310800023300C /* Vega.app */;
@@ -153,6 +158,7 @@
 			);
 			name = VegaTests;
 			packageProductDependencies = (
+				A30000000000000000000003 /* PowerSync */,
 			);
 			productName = VegaTests;
 			productReference = 73FA6248302310810023300C /* VegaTests.xctest */;
@@ -215,6 +221,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A10000000000000000000003 /* XCLocalSwiftPackageReference "Packages/WgerAPI" */,
+				A30000000000000000000002 /* XCRemoteSwiftPackageReference "powersync-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73FA623C302310800023300C /* Products */;
@@ -603,11 +610,27 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A30000000000000000000002 /* XCRemoteSwiftPackageReference "powersync-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/powersync-ja/powersync-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.16.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		A10000000000000000000002 /* WgerAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A10000000000000000000003 /* XCLocalSwiftPackageReference "Packages/WgerAPI" */;
 			productName = WgerAPI;
+		};
+		A30000000000000000000003 /* PowerSync */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A30000000000000000000002 /* XCRemoteSwiftPackageReference "powersync-swift" */;
+			productName = PowerSync;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
