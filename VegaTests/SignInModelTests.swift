@@ -47,6 +47,7 @@ struct SignInModelTests {
             await credentialStore.session
                 == StoredSession(
                     instanceAddress: "https://wger.example/",
+                    accessToken: "access",
                     refreshToken: "refresh"
                 )
         )
@@ -96,6 +97,7 @@ struct SignInModelTests {
             await credentialStore.session
                 == StoredSession(
                     instanceAddress: "https://wger.example/",
+                    accessToken: "access",
                     refreshToken: "refresh"
                 )
         )
@@ -152,6 +154,7 @@ struct SignInModelTests {
             await credentialStore.session
                 == StoredSession(
                     instanceAddress: "https://wger.example/",
+                    accessToken: "access",
                     refreshToken: "rotated"
                 )
         )
@@ -190,6 +193,7 @@ struct SignInModelTests {
             await credentialStore.session
                 == StoredSession(
                     instanceAddress: "https://wger.example/",
+                    accessToken: "new-access",
                     refreshToken: "new-refresh"
                 )
         )
@@ -243,7 +247,33 @@ struct SignInModelTests {
     }
 
     @Test
-    func proofFailureKeepsRotatedCredential() async throws {
+    func cachedSessionOpensOfflineWhenConnectionProofFails() async throws {
+        let storedSession = StoredSession(
+            instanceAddress: "https://wger.example/",
+            accessToken: "cached-access",
+            refreshToken: "refresh"
+        )
+        let credentialStore = InMemorySessionCredentialStore(session: storedSession)
+        let model = SignInModel(
+            authenticationClient: StubAuthenticationClient(result: .failure(.expiredSession)),
+            connectionChecker: StubConnectionChecker(result: .failure(.failed)),
+            sessionCoordinator: SessionCoordinator(
+                sessionRefresher: StubSessionRefresher(result: .failure(.network)),
+                credentialStore: credentialStore
+            )
+        )
+        let expectedInstance = try InstanceURL("wger.example")
+
+        await model.restoreSession()
+
+        #expect(model.connectedAccount?.instance == expectedInstance)
+        #expect(model.connectedAccount?.nutritionPlanCount == 0)
+        #expect(model.errorMessage == nil)
+        #expect(await credentialStore.session == storedSession)
+    }
+
+    @Test
+    func proofFailureOpensOfflineWithRotatedCredential() async throws {
         let credentialStore = InMemorySessionCredentialStore(
             session: StoredSession(
                 instanceAddress: "https://wger.example/",
@@ -265,14 +295,18 @@ struct SignInModelTests {
                 credentialStore: credentialStore
             )
         )
+        let expectedInstance = try InstanceURL("wger.example")
 
         await model.restoreSession()
 
-        #expect(model.connectedAccount == nil)
+        #expect(model.connectedAccount?.instance == expectedInstance)
+        #expect(model.connectedAccount?.nutritionPlanCount == 0)
+        #expect(model.errorMessage == nil)
         #expect(
             await credentialStore.session
                 == StoredSession(
                     instanceAddress: "https://wger.example/",
+                    accessToken: "new-access",
                     refreshToken: "new-refresh"
                 )
         )

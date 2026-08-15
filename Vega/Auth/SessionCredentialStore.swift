@@ -6,7 +6,14 @@ import Foundation
 
 nonisolated struct StoredSession: Equatable, Sendable {
     let instanceAddress: String
+    let accessToken: String?
     let refreshToken: String
+
+    init(instanceAddress: String, accessToken: String? = nil, refreshToken: String) {
+        self.instanceAddress = instanceAddress
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+    }
 }
 
 nonisolated enum SessionPersistenceError: Error, Equatable, Sendable {
@@ -33,6 +40,11 @@ nonisolated protocol SessionCredentialStoring: Sendable {
 
 #if canImport(Security)
     actor KeychainSessionCredentialStore: SessionCredentialStoring {
+        private struct StoredCredentials: Codable {
+            let accessToken: String?
+            let refreshToken: String
+        }
+
         private let service: String
         private let account: String
         private let instanceAddressKey: String
@@ -52,10 +64,10 @@ nonisolated protocol SessionCredentialStoring: Sendable {
 
         func load() throws -> StoredSession? {
             let instanceAddress = defaults.string(forKey: instanceAddressKey)
-            let refreshToken = try readRefreshToken()
+            let credentials = try readCredentials()
 
-            guard let instanceAddress, let refreshToken else {
-                if instanceAddress != nil || refreshToken != nil {
+            guard let instanceAddress, let credentials else {
+                if instanceAddress != nil || credentials != nil {
                     try clear()
                 }
                 return nil
@@ -63,12 +75,18 @@ nonisolated protocol SessionCredentialStoring: Sendable {
 
             return StoredSession(
                 instanceAddress: instanceAddress,
-                refreshToken: refreshToken
+                accessToken: credentials.accessToken,
+                refreshToken: credentials.refreshToken
             )
         }
 
         func save(_ session: StoredSession) throws {
-            try writeRefreshToken(session.refreshToken)
+            try writeCredentials(
+                StoredCredentials(
+                    accessToken: session.accessToken,
+                    refreshToken: session.refreshToken
+                )
+            )
             defaults.set(session.instanceAddress, forKey: instanceAddressKey)
         }
 
@@ -88,7 +106,7 @@ nonisolated protocol SessionCredentialStoring: Sendable {
             ]
         }
 
-        private func readRefreshToken() throws -> String? {
+        private func readCredentials() throws -> StoredCredentials? {
             var query = baseQuery
             query[kSecReturnData as String] = true
             query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -98,17 +116,20 @@ nonisolated protocol SessionCredentialStoring: Sendable {
             if status == errSecItemNotFound {
                 return nil
             }
-            guard status == errSecSuccess,
-                let data = result as? Data,
-                let token = String(data: data, encoding: .utf8)
-            else {
+            guard status == errSecSuccess, let data = result as? Data else {
                 throw SessionPersistenceError.keychain(status)
             }
-            return token
+            if let credentials = try? JSONDecoder().decode(StoredCredentials.self, from: data) {
+                return credentials
+            }
+            guard let legacyRefreshToken = String(data: data, encoding: .utf8) else {
+                throw SessionPersistenceError.keychain(errSecDecode)
+            }
+            return StoredCredentials(accessToken: nil, refreshToken: legacyRefreshToken)
         }
 
-        private func writeRefreshToken(_ token: String) throws {
-            let data = Data(token.utf8)
+        private func writeCredentials(_ credentials: StoredCredentials) throws {
+            let data = try JSONEncoder().encode(credentials)
             let updateStatus = SecItemUpdate(
                 baseQuery as CFDictionary,
                 [kSecValueData as String: data] as CFDictionary

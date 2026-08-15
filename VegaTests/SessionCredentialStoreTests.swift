@@ -19,6 +19,7 @@ import Testing
             try await store.save(
                 StoredSession(
                     instanceAddress: "https://first.example/",
+                    accessToken: "first-access",
                     refreshToken: "first-token"
                 )
             )
@@ -26,6 +27,7 @@ import Testing
                 try await store.load()
                     == StoredSession(
                         instanceAddress: "https://first.example/",
+                        accessToken: "first-access",
                         refreshToken: "first-token"
                     )
             )
@@ -33,6 +35,7 @@ import Testing
             try await store.save(
                 StoredSession(
                     instanceAddress: "https://second.example/",
+                    accessToken: "second-access",
                     refreshToken: "rotated-token"
                 )
             )
@@ -40,6 +43,7 @@ import Testing
                 try await store.load()
                     == StoredSession(
                         instanceAddress: "https://second.example/",
+                        accessToken: "second-access",
                         refreshToken: "rotated-token"
                     )
             )

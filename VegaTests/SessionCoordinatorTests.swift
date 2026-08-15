@@ -29,9 +29,31 @@ nonisolated struct SessionCoordinatorTests {
             await store.session
                 == StoredSession(
                     instanceAddress: "https://wger.example/",
+                    accessToken: "access",
                     refreshToken: "refresh"
                 )
         )
+    }
+
+    @Test
+    func restoresCachedAccessWithoutNetwork() async throws {
+        let stored = StoredSession(
+            instanceAddress: "https://wger.example/",
+            accessToken: "cached-access",
+            refreshToken: "refresh"
+        )
+        let store = CoordinatorCredentialStore(session: stored)
+        let refresher = CoordinatorSessionRefresher(result: .failure(.network))
+        let coordinator = SessionCoordinator(
+            sessionRefresher: refresher,
+            credentialStore: store
+        )
+
+        let restored = try await coordinator.restore()
+
+        #expect(restored?.credentials.accessToken == "cached-access")
+        #expect(await refresher.callCount == 0)
+        #expect(await store.session == stored)
     }
 
     @Test
@@ -123,6 +145,10 @@ private actor CoordinatorSessionRefresher: SessionRefreshing {
 
 private actor CoordinatorCredentialStore: SessionCredentialStoring {
     private(set) var session: StoredSession?
+
+    init(session: StoredSession? = nil) {
+        self.session = session
+    }
 
     func load() -> StoredSession? {
         session
