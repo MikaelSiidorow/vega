@@ -9,6 +9,8 @@ against a self-hosted wger server.
 - Complete TOTP and recovery-code challenges, or hand authentication to the
   server's web flow for passkeys, social login, and SSO.
 - Persist and refresh sessions securely through Keychain.
+- Restore synchronized accounts offline and isolate each host/account in its
+  own PowerSync SQLite database.
 - Load a daily nutrition diary with meal groups, unassigned-log time groups,
   serving units, calories, and macros.
 - Compare consumed energy, protein, carbohydrates, and fat with configured
@@ -29,10 +31,13 @@ against a self-hosted wger server.
 - Browse workout routines and their server-resolved training days, then record,
   correct, or delete today's sets with repetitions and weight.
 - Exercise deterministic diary states in UI tests without a live account.
+- Read weight, nutrition plans and goals, diary history, recent foods, routines,
+  workout sessions, and set logs locally; queue offline edits and expose sync
+  state and reconnect controls.
 
 ## Next
 
-- Add workout sessions, rest timers, and richer exercise details.
+- Add richer exercise details and routine authoring.
 - Expand generated API contract fixtures as more server surfaces are adopted.
 - Improve accessibility, localization, decimal input, and time-zone behavior.
 
@@ -40,8 +45,7 @@ against a self-hosted wger server.
 
 - Repeated and favorite foods.
 - App Intents and widgets.
-- Last-known-data caching and offline writes; reevaluate PowerSync when the
-  required offline behavior is concrete.
+- Background sync and user-selectable retention for signed-out account data.
 
 Keep this file forward-looking. Detailed experiments, personal usage notes,
 and temporary implementation plans belong in issues or local notes.

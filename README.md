@@ -1,8 +1,9 @@
 # Vega
 
-Vega is an independent, native SwiftUI client for self-hosted
+Vega is an independent, native, local-first SwiftUI client for self-hosted
 [wger](https://wger.de) fitness and nutrition servers. It focuses on making
-frequent nutrition-tracking tasks feel fast and at home on iOS.
+frequent nutrition and workout tracking feel fast and at home on iOS, including
+when the network is unavailable.
 
 Vega is an early-stage, unofficial project. It is not affiliated with or
 endorsed by the wger project.
@@ -11,9 +12,10 @@ See the short [roadmap](docs/roadmap.md) for current and planned work.
 
 ## Relationship to wger
 
-Vega is a native SwiftUI client built against wger's documented HTTP API. Most
-of the implementation is original Swift code; selected interaction patterns,
-including the focused workout sequence, are adapted from the
+Vega is a native SwiftUI client built against wger's documented HTTP and
+PowerSync contracts. Most of the implementation is original Swift code;
+selected interaction patterns, including the focused workout sequence and
+PowerSync upload behavior, are adapted from the
 [official wger Flutter client](https://github.com/wger-project/flutter). The
 [wger server](https://github.com/wger-project/wger), Flutter client, and Vega
 are licensed under the GNU Affero General Public License.
@@ -22,6 +24,18 @@ The checked-in OpenAPI snapshots originate from a wger 2.6 server and are
 mechanically normalized for Apple's Swift OpenAPI Generator. Vega does not
 bundle wger's exercise, ingredient, or image catalogs. See [NOTICE.md](NOTICE.md)
 for provenance and third-party licensing details.
+
+## Local-first data
+
+Weight, nutrition plans and goals, diary history, recent foods, routines,
+workout sessions, and set logs read and write through a per-account PowerSync
+SQLite database. Changes are available immediately offline and upload when the
+connection returns. Authentication, PowerSync credentials, ingredient/barcode
+search, and the workout schedule that wger does not yet synchronize continue to
+use REST. The account menu exposes the current sync state and queued changes.
+
+See [PowerSync architecture](docs/powersync.md) for the data boundary, retry and
+isolation rules, server compatibility, and exact upstream references.
 
 ## Setup from a fresh clone
 
