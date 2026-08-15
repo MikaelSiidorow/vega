@@ -4,6 +4,7 @@ import SwiftUI
 struct WorkoutsView: View {
     @Bindable var model: WorkoutScreenModel
     let instanceName: String
+    let syncModel: SyncStatusModel?
     let signOut: () -> Void
 
     @State private var editor: WorkoutSetEditorContext?
@@ -31,15 +32,14 @@ struct WorkoutsView: View {
         .navigationTitle("Workouts")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Text(instanceName)
-                    Button("Sign out", role: .destructive, action: signOut)
-                } label: {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
+                AccountMenu(
+                    instanceName: instanceName,
+                    syncModel: syncModel,
+                    signOut: signOut
+                )
             }
         }
-        .task { await model.load() }
+        .task { await model.observe() }
         .sheet(item: $editor) { context in
             WorkoutSetForm(
                 context: context,

@@ -154,6 +154,26 @@ final class BasicLoggingDiaryUITests: VegaUITestCase {
     }
 }
 
+final class SyncStatusUITests: VegaUITestCase {
+    @MainActor
+    func testShowsQueuedOfflineChangesInAccountMenu() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-uiTestBasicDiaryFixture", "-uiTestSyncOfflineFixture", "-AppleLocale", "en_US",
+        ]
+        app.launch()
+
+        let account = app.buttons["Account"]
+        XCTAssertTrue(account.waitForExistence(timeout: 5))
+        account.tap()
+
+        let status = app.buttons["retry-sync"]
+        XCTAssertTrue(status.waitForExistence(timeout: 2))
+        XCTAssertTrue(status.label.contains("Offline — 2 changes waiting"))
+        capture("Offline changes waiting to sync")
+    }
+}
+
 final class PlannedMealsDiaryUITests: VegaUITestCase {
     @MainActor
     func testShowsPlannedMealsDiary() throws {
