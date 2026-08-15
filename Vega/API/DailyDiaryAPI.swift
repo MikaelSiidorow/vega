@@ -39,6 +39,20 @@ nonisolated struct RecentDiaryPayload: Equatable, Sendable {
 
 nonisolated protocol DailyDiaryFetching: Sendable {
     func diary(for date: Date, calendar: Calendar) async throws -> DailyDiaryPayload
+    func diaryStream(for date: Date, calendar: Calendar) async throws
+        -> AsyncThrowingStream<DailyDiaryPayload, Error>
+}
+
+extension DailyDiaryFetching {
+    nonisolated func diaryStream(for date: Date, calendar: Calendar) async throws
+        -> AsyncThrowingStream<DailyDiaryPayload, Error>
+    {
+        let value = try await diary(for: date, calendar: calendar)
+        return AsyncThrowingStream { continuation in
+            continuation.yield(value)
+            continuation.finish()
+        }
+    }
 }
 
 nonisolated protocol DiaryEntryDeleting: Sendable {
@@ -77,6 +91,14 @@ nonisolated protocol RecentDiaryFetching: Sendable {
         calendar: Calendar
     ) async throws -> RecentDiaryPayload
 }
+
+nonisolated protocol NutritionDataStore:
+    DailyDiaryFetching,
+    DiaryEntryDeleting,
+    DiaryEntryUpdating,
+    DiaryEntryCreating,
+    RecentDiaryFetching
+{}
 
 nonisolated protocol DailyDiaryTransport: Sendable {
     func plans(
@@ -296,9 +318,7 @@ nonisolated struct WgerDailyDiaryTransport: DailyDiaryTransport {
     }
 }
 
-actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
-    IngredientSearching, DiaryEntryCreating, RecentDiaryFetching
-{
+actor DailyDiaryAPI: NutritionDataStore, IngredientSearching {
     private static let pageSize = 100
     private static let recentHistoryDays = 42
     private let client: any AuthenticatedRequestExecuting
@@ -326,7 +346,13 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
                 instance: instance,
                 session: session
             )
-            guard let plan = Self.activePlan(in: plans, for: date, calendar: calendar) else {
+            guard
+                let plan = NutritionPlanSelection.active(
+                    in: plans,
+                    for: date,
+                    calendar: calendar
+                )
+            else {
                 return DailyDiaryPayload.empty
             }
             let entries = try await Self.allEntries(
@@ -559,7 +585,10 @@ actor DailyDiaryAPI: DailyDiaryFetching, DiaryEntryDeleting, DiaryEntryUpdating,
         }
     }
 
-    private static func activePlan(
+}
+
+nonisolated enum NutritionPlanSelection {
+    static func active(
         in plans: [WgerNutritionPlan],
         for date: Date,
         calendar: Calendar

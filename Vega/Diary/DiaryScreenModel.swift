@@ -96,6 +96,34 @@ final class DiaryScreenModel {
         }
     }
 
+    func observe() async {
+        let requestedDate = selectedDate
+        let requestedRevision = selectionRevision
+        phase = .loading
+
+        do {
+            let stream = try await diaryFetcher.diaryStream(
+                for: requestedDate,
+                calendar: calendar
+            )
+            for try await payload in stream {
+                try Task.checkCancellation()
+                let diary = try DailyDiary.build(from: payload, date: requestedDate)
+                guard requestedRevision == selectionRevision, requestedDate == selectedDate else {
+                    return
+                }
+                phase = .loaded(diary)
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            guard requestedRevision == selectionRevision, requestedDate == selectedDate else {
+                return
+            }
+            phase = .failed(Self.message(for: error))
+        }
+    }
+
     func deleteEntry(id: String) async {
         guard deletingEntryID == nil else { return }
         deletingEntryID = id
