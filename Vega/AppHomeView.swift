@@ -10,6 +10,7 @@ struct AppHomeView: View {
     @Bindable var diaryModel: DiaryScreenModel
     @Bindable var workoutModel: WorkoutScreenModel
     @Bindable var weightModel: WeightHistoryModel
+    let syncModel: SyncStatusModel?
     let instanceName: String
     let signOut: () -> Void
     @State private var selection = Destination.diary
@@ -21,6 +22,7 @@ struct AppHomeView: View {
                     DailyDiaryView(
                         model: diaryModel,
                         instanceName: instanceName,
+                        syncModel: syncModel,
                         signOut: signOut
                     )
                 }
@@ -31,6 +33,7 @@ struct AppHomeView: View {
                     WorkoutsView(
                         model: workoutModel,
                         instanceName: instanceName,
+                        syncModel: syncModel,
                         signOut: signOut
                     )
                 }
@@ -41,10 +44,12 @@ struct AppHomeView: View {
                     WeightHistoryView(
                         model: weightModel,
                         instanceName: instanceName,
+                        syncModel: syncModel,
                         signOut: signOut
                     )
                 }
             }
         }
+        .task { await syncModel?.monitor() }
     }
 }

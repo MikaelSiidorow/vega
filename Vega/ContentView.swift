@@ -10,9 +10,11 @@ struct ContentView: View {
     @State private var diaryModel: DiaryScreenModel
     @State private var workoutModel: WorkoutScreenModel
     @State private var weightModel: WeightHistoryModel
+    @State private var syncModel: SyncStatusModel?
     @State private var isWebSigningIn = false
     private let showsDiaryFixture: Bool
     private let barcodeScannerMode: BarcodeScannerMode
+    private let powerSync: (any PowerSyncDatabaseProviding)?
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
@@ -57,6 +59,29 @@ struct ContentView: View {
         )
         _model = State(initialValue: signInModel)
         if let fixtureMode {
+            powerSync = nil
+            if arguments.contains("-uiTestSyncOfflineFixture") {
+                _syncModel = State(
+                    initialValue: SyncStatusModel(
+                        readStatus: {
+                            VegaSyncStatus(
+                                connected: false,
+                                connecting: false,
+                                downloading: false,
+                                uploading: false,
+                                hasSynced: true,
+                                lastSyncedAt: nil,
+                                pendingUploads: 2,
+                                errorMessage: nil,
+                                rejection: nil
+                            )
+                        },
+                        reconnect: {}
+                    )
+                )
+            } else {
+                _syncModel = State(initialValue: nil)
+            }
             let diaryStore = FixtureDailyDiaryStore(mode: fixtureMode)
             let workoutStore = FixtureWorkoutStore()
             let weightStore = FixtureWeightStore()
@@ -97,30 +122,49 @@ struct ContentView: View {
             let diaryAPI = DailyDiaryAPI(client: authenticatedClient)
             let workoutAPI = WorkoutAPI(client: authenticatedClient)
             let weightAPI = WeightAPI(client: authenticatedClient)
+            let powerSyncController = WgerPowerSyncController(
+                sessionCoordinator: sessionCoordinator,
+                remote: WgerPowerSyncRemoteAPI(client: authenticatedClient)
+            )
+            let weightStore = PowerSyncWeightRepository(
+                powerSync: powerSyncController,
+                fallback: weightAPI
+            )
+            let nutritionStore = PowerSyncNutritionRepository(
+                powerSync: powerSyncController,
+                fallback: diaryAPI
+            )
+            let workoutStore = PowerSyncWorkoutRepository(
+                powerSync: powerSyncController,
+                fallback: workoutAPI,
+                structure: workoutAPI
+            )
+            powerSync = powerSyncController
+            _syncModel = State(initialValue: SyncStatusModel(powerSync: powerSyncController))
             _diaryModel = State(
                 initialValue: DiaryScreenModel(
-                    diaryFetcher: diaryAPI,
-                    diaryEntryDeleter: diaryAPI,
-                    diaryEntryUpdater: diaryAPI,
+                    diaryFetcher: nutritionStore,
+                    diaryEntryDeleter: nutritionStore,
+                    diaryEntryUpdater: nutritionStore,
                     ingredientSearcher: diaryAPI,
-                    diaryEntryCreator: diaryAPI,
-                    recentDiaryFetcher: diaryAPI
+                    diaryEntryCreator: nutritionStore,
+                    recentDiaryFetcher: nutritionStore
                 )
             )
             _workoutModel = State(
                 initialValue: WorkoutScreenModel(
-                    dashboardFetcher: workoutAPI,
-                    setCreator: workoutAPI,
-                    setUpdater: workoutAPI,
-                    setDeleter: workoutAPI
+                    dashboardFetcher: workoutStore,
+                    setCreator: workoutStore,
+                    setUpdater: workoutStore,
+                    setDeleter: workoutStore
                 )
             )
             _weightModel = State(
                 initialValue: WeightHistoryModel(
-                    historyFetcher: weightAPI,
-                    entryCreator: weightAPI,
-                    entryUpdater: weightAPI,
-                    entryDeleter: weightAPI
+                    historyFetcher: weightStore,
+                    entryCreator: weightStore,
+                    entryUpdater: weightStore,
+                    entryDeleter: weightStore
                 )
             )
         }
@@ -133,6 +177,7 @@ struct ContentView: View {
                     diaryModel: diaryModel,
                     workoutModel: workoutModel,
                     weightModel: weightModel,
+                    syncModel: syncModel,
                     instanceName: "fixture.wger.local",
                     signOut: {}
                 )
@@ -141,6 +186,7 @@ struct ContentView: View {
                     diaryModel: diaryModel,
                     workoutModel: workoutModel,
                     weightModel: weightModel,
+                    syncModel: syncModel,
                     instanceName: account.instance.url.host()
                         ?? account.instance.url.absoluteString,
                     signOut: signOut
@@ -337,7 +383,10 @@ struct ContentView: View {
     }
 
     private func signOut() {
-        Task { await model.signOut() }
+        Task {
+            try? await powerSync?.clearCurrentAccount()
+            await model.signOut()
+        }
     }
 }
 

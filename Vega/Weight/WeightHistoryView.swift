@@ -4,6 +4,7 @@ import SwiftUI
 struct WeightHistoryView: View {
     @Bindable var model: WeightHistoryModel
     let instanceName: String
+    let syncModel: SyncStatusModel?
     let signOut: () -> Void
 
     @State private var showsCreator = false
@@ -35,15 +36,14 @@ struct WeightHistoryView: View {
                     .accessibilityIdentifier("add-weight-entry")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Text(instanceName)
-                    Button("Sign out", role: .destructive, action: signOut)
-                } label: {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
+                AccountMenu(
+                    instanceName: instanceName,
+                    syncModel: syncModel,
+                    signOut: signOut
+                )
             }
         }
-        .task { await model.load() }
+        .task { await model.observe() }
         .refreshable { await model.load() }
         .sheet(isPresented: $showsCreator) {
             WeightEntryForm(

@@ -4,6 +4,7 @@ import SwiftUI
 struct DailyDiaryView: View {
     @Bindable var model: DiaryScreenModel
     let instanceName: String
+    let syncModel: SyncStatusModel?
     let signOut: () -> Void
     @State private var pendingDeletion: DiaryItem?
     @State private var pendingEdit: DiaryItem?
@@ -43,16 +44,15 @@ struct DailyDiaryView: View {
                 .accessibilityIdentifier("add-diary-entry")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Text(instanceName)
-                    Button("Sign out", role: .destructive, action: signOut)
-                } label: {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
+                AccountMenu(
+                    instanceName: instanceName,
+                    syncModel: syncModel,
+                    signOut: signOut
+                )
             }
         }
         .task(id: model.selectedDate) {
-            await model.load()
+            await model.observe()
         }
         .alert(
             "Delete \(pendingDeletion?.name ?? "entry")?",
