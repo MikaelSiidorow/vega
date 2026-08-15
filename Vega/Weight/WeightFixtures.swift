@@ -1,17 +1,12 @@
 import Foundation
 
-actor FixtureWeightStore:
-    WeightHistoryFetching,
-    WeightEntryCreating,
-    WeightEntryUpdating,
-    WeightEntryDeleting
-{
+actor FixtureWeightStore: WeightDataStore {
     private var entries: [WgerWeightEntry]
     private var nextID: Int
 
     init(entries: [WgerWeightEntry] = FixtureWeightStore.sampleEntries) {
         self.entries = entries
-        nextID = (entries.map(\.id).max() ?? 0) + 1
+        nextID = (entries.compactMap { Int($0.id) }.max() ?? 0) + 1
     }
 
     func weightHistory() -> [WgerWeightEntry] {
@@ -20,17 +15,17 @@ actor FixtureWeightStore:
 
     func createWeightEntry(date: Date, weight: String) throws {
         entries.append(
-            WgerWeightEntry(id: nextID, date: date, weight: try Self.decimal(weight))
+            WgerWeightEntry(id: String(nextID), date: date, weight: try Self.decimal(weight))
         )
         nextID += 1
     }
 
-    func updateWeightEntry(id: Int, date: Date, weight: String) throws {
+    func updateWeightEntry(id: String, date: Date, weight: String) throws {
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
         entries[index] = WgerWeightEntry(id: id, date: date, weight: try Self.decimal(weight))
     }
 
-    func deleteWeightEntry(id: Int) {
+    func deleteWeightEntry(id: String) {
         entries.removeAll { $0.id == id }
     }
 
@@ -53,7 +48,7 @@ actor FixtureWeightStore:
 
     private static func entry(_ id: Int, _ date: String, _ weight: Decimal) -> WgerWeightEntry {
         WgerWeightEntry(
-            id: id,
+            id: String(id),
             date: ISO8601DateFormatter().date(from: date)!,
             weight: weight
         )

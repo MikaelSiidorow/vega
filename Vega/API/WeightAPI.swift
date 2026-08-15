@@ -3,6 +3,19 @@ import WgerAPI
 
 nonisolated protocol WeightHistoryFetching: Sendable {
     func weightHistory() async throws -> [WgerWeightEntry]
+    func weightHistoryStream() async throws -> AsyncThrowingStream<[WgerWeightEntry], Error>
+}
+
+extension WeightHistoryFetching {
+    nonisolated func weightHistoryStream() async throws
+        -> AsyncThrowingStream<[WgerWeightEntry], Error>
+    {
+        let entries = try await weightHistory()
+        return AsyncThrowingStream { continuation in
+            continuation.yield(entries)
+            continuation.finish()
+        }
+    }
 }
 
 nonisolated protocol WeightEntryCreating: Sendable {
@@ -10,12 +23,19 @@ nonisolated protocol WeightEntryCreating: Sendable {
 }
 
 nonisolated protocol WeightEntryUpdating: Sendable {
-    func updateWeightEntry(id: Int, date: Date, weight: String) async throws
+    func updateWeightEntry(id: String, date: Date, weight: String) async throws
 }
 
 nonisolated protocol WeightEntryDeleting: Sendable {
-    func deleteWeightEntry(id: Int) async throws
+    func deleteWeightEntry(id: String) async throws
 }
+
+nonisolated protocol WeightDataStore:
+    WeightHistoryFetching,
+    WeightEntryCreating,
+    WeightEntryUpdating,
+    WeightEntryDeleting
+{}
 
 nonisolated protocol WeightTransport: Sendable {
     func entries(
@@ -109,12 +129,7 @@ nonisolated struct WgerWeightTransport: WeightTransport {
     }
 }
 
-nonisolated struct WeightAPI:
-    WeightHistoryFetching,
-    WeightEntryCreating,
-    WeightEntryUpdating,
-    WeightEntryDeleting
-{
+nonisolated struct WeightAPI: WeightDataStore {
     private let client: any AuthenticatedRequestExecuting
     private let transport: any WeightTransport
     private let pageSize: Int
@@ -159,7 +174,8 @@ nonisolated struct WeightAPI:
         }
     }
 
-    func updateWeightEntry(id: Int, date: Date, weight: String) async throws {
+    func updateWeightEntry(id: String, date: Date, weight: String) async throws {
+        guard let id = Int(id) else { throw WgerModelError.invalidIdentifier(id) }
         try await client.perform { instance, session in
             try await transport.update(
                 instance: instance,
@@ -171,7 +187,8 @@ nonisolated struct WeightAPI:
         }
     }
 
-    func deleteWeightEntry(id: Int) async throws {
+    func deleteWeightEntry(id: String) async throws {
+        guard let id = Int(id) else { throw WgerModelError.invalidIdentifier(id) }
         try await client.perform { instance, session in
             try await transport.delete(instance: instance, session: session, id: id)
         }
