@@ -73,10 +73,8 @@ jobs:
 
   ui-tests:
     if: >-
-      needs.check.result == 'success' &&
-      (github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'run-ui-tests'))
-    needs: check
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'run-ui-tests')
     name: UI test and screenshots
     runs-on: macos-26
     timeout-minutes: 30
