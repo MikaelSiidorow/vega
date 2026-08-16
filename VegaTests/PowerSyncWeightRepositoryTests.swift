@@ -64,16 +64,13 @@ nonisolated struct PowerSyncWeightRepositoryTests {
         )
         let date = try #require(Self.date("2026-08-16T07:30:00Z"))
         let stream = try await repository.weightHistoryStream()
-        let observation = Task { () throws -> [WgerWeightEntry] in
-            var iterator = stream.makeAsyncIterator()
-            _ = try await iterator.next()
-            return try #require(try await iterator.next())
-        }
+        var iterator = stream.makeAsyncIterator()
+        #expect(try await iterator.next() == [])
 
         try await repository.createWeightEntry(date: date, weight: "80")
 
         #expect(
-            try await observation.value
+            try #require(try await iterator.next())
                 == [WgerWeightEntry(id: "watched-weight", date: date, weight: 80)]
         )
     }
