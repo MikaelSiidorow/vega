@@ -684,7 +684,7 @@ final class WorkoutUITests: VegaUITestCase {
         XCTAssertTrue(repetitions.waitForNonExistence(timeout: 5))
         XCTAssertTrue(edited.waitForExistence(timeout: 5))
         let updated = app.staticTexts.matching(identifier: "workout-log-fixture-log-2")
-            .matching(NSPredicate(format: "label CONTAINS %@", "12 Repetitions · 47.5 kg"))
+            .matching(NSPredicate(format: "label CONTAINS %@", "12 reps · 47.5 kg"))
             .firstMatch
         XCTAssertTrue(updated.waitForExistence(timeout: 5))
 
@@ -728,8 +728,8 @@ final class WorkoutUITests: VegaUITestCase {
         capture("Focused workout current set")
 
         app.buttons["workout-weight-unit"].tap()
-        XCTAssertTrue(app.buttons["Body Weight"].waitForExistence(timeout: 2))
-        app.buttons["Body Weight"].tap()
+        XCTAssertTrue(app.buttons["Body weight"].waitForExistence(timeout: 2))
+        app.buttons["Body weight"].tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["workout-weight"].waitForExistence(timeout: 2))
         capture("Focused workout bodyweight shortcut")
