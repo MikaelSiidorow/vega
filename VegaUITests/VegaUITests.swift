@@ -334,7 +334,6 @@ final class AddDiaryEntryUITests: VegaUITestCase {
         XCTAssertTrue(tofu.exists)
         XCTAssertTrue(normalizedWhitespace(tofu.label).contains("2 × portion = 200 g"))
 
-        Thread.sleep(forTimeInterval: 5)
         let recentFoods = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         recentFoods.name = "Recent food suggestions"
         recentFoods.lifetime = .keepAlways
@@ -394,8 +393,6 @@ final class AddDiaryEntryUITests: VegaUITestCase {
         let banana = app.buttons["ingredient-result-4"]
         XCTAssertTrue(banana.waitForExistence(timeout: 5))
 
-        // Ephemeral simulator system banners can otherwise obscure visual attachments.
-        Thread.sleep(forTimeInterval: 5)
         let searchResults = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         searchResults.name = "Ingredient search results"
         searchResults.lifetime = .keepAlways
