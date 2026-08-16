@@ -67,7 +67,7 @@ struct DiaryEntryCreator: View {
                             .accessibilityIdentifier("confirm-add-diary-entry")
                     }
                 } else {
-                    ToolbarItem(placement: .confirmationAction) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Scan barcode", systemImage: "barcode.viewfinder") {
                             showsBarcodeScanner = true
                         }
@@ -131,6 +131,10 @@ struct DiaryEntryCreator: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        TapGesture().onEnded { selectSearchResult(ingredient) }
+                    )
                     .accessibilityIdentifier("ingredient-result-\(ingredient.id)")
                 }
             }
@@ -226,6 +230,7 @@ struct DiaryEntryCreator: View {
                 }
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier(
             "recent-food-\(portion.id.ingredientID)-\(portion.id.weightUnitID ?? 0)-\(portion.id.amount)"
         )

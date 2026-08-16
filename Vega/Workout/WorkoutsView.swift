@@ -214,20 +214,13 @@ struct WorkoutsView: View {
                     .foregroundStyle(.secondary)
             }
             if !completed.isEmpty {
-                HStack {
-                    Label("Logged today", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("Correct a set")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
+                Label("Logged today", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
             ForEach(Array(completed.enumerated()), id: \.element.id) { index, log in
                 HStack {
                     Label("Set \(index + 1)", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
                     Spacer()
                     Text(
                         logDescription(
