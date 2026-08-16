@@ -12,6 +12,7 @@ struct DiaryEntryEditor: View {
     @State private var date: Date
     @State private var mealID: String?
     @State private var isSaving = false
+    @FocusState private var isAmountFocused: Bool
 
     init(
         item: DiaryItem,
@@ -31,10 +32,14 @@ struct DiaryEntryEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Amount") {
-                    TextField("Amount", text: $amount)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("diary-edit-amount")
+                Section("Portion") {
+                    LabeledContent("Amount") {
+                        TextField("Amount", text: $amount)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($isAmountFocused)
+                            .accessibilityIdentifier("diary-edit-amount")
+                    }
                     Picker("Unit", selection: $weightUnitID) {
                         Text("grams").tag(nil as Int?)
                         ForEach(item.weightUnits, id: \.id) { unit in
@@ -43,9 +48,6 @@ struct DiaryEntryEditor: View {
                     }
                     .pickerStyle(.menu)
                     .accessibilityIdentifier("diary-edit-unit")
-                }
-
-                Section("Before saving") {
                     LabeledContent("Gram equivalent") {
                         Text(gramDescription)
                             .accessibilityIdentifier("diary-edit-grams")
@@ -103,6 +105,10 @@ struct DiaryEntryEditor: View {
                     }
                     .disabled(normalizedAmount == nil || isSaving)
                     .accessibilityIdentifier("save-diary-entry")
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isAmountFocused = false }
                 }
             }
             .overlay {

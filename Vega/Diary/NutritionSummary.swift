@@ -8,16 +8,11 @@ struct NutritionSummary: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: VegaSpacing.comfortable) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Daily progress")
-                    .font(.title3.weight(.bold))
-                Spacer()
-                if let goalDescription {
-                    Text(goalDescription)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("nutrition-goal-source")
-                }
+            if let goalDescription {
+                Text(goalDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("nutrition-goal-source")
             }
 
             energySummary
