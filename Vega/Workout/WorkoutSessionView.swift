@@ -16,6 +16,7 @@ struct WorkoutSessionView: View {
     @State private var currentStepIndex = 0
     @State private var completedInSession = 0
     @State private var startedAt: Date?
+    @State private var completedAt: Date?
     @State private var restEnd = Date()
     @State private var lastInputByExercise: [Int: WorkoutSetInput] = [:]
     @State private var inputByStep: [String: WorkoutSetInput] = [:]
@@ -173,6 +174,7 @@ struct WorkoutSessionView: View {
                         inputByStep[step.id] = input
                         completedInSession += 1
                         if currentStepIndex + 1 >= session.pendingSteps.count {
+                            completedAt = Date()
                             phase = .summary
                         } else {
                             restEnd = Date().addingTimeInterval(TimeInterval(step.plan.restSeconds))
@@ -261,12 +263,12 @@ struct WorkoutSessionView: View {
                     summaryMetric(title: "Exercises", value: "\(session.day.exercises.count)")
                 }
 
-                if let startedAt {
+                if let durationDescription {
                     VStack(alignment: .leading, spacing: VegaSpacing.small) {
                         Text("Duration")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text(startedAt, style: .timer)
+                        Text(durationDescription)
                             .font(.title.weight(.semibold).monospacedDigit())
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -316,6 +318,13 @@ struct WorkoutSessionView: View {
     private var currentStep: WorkoutSetStep? {
         guard session.pendingSteps.indices.contains(currentStepIndex) else { return nil }
         return session.pendingSteps[currentStepIndex]
+    }
+
+    private var durationDescription: String? {
+        guard let startedAt, let completedAt else { return nil }
+        return Duration.seconds(max(0, completedAt.timeIntervalSince(startedAt))).formatted(
+            .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2)
+        )
     }
 
     private var nextStep: WorkoutSetStep? {

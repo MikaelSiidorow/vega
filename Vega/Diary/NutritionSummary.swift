@@ -50,7 +50,7 @@ struct NutritionSummary: View {
                 .foregroundStyle(.secondary)
 
             HStack(alignment: .firstTextBaseline, spacing: VegaSpacing.small) {
-                Text(displayValue, format: .number.precision(.fractionLength(0...1)))
+                Text(displayValue, format: .number.precision(.fractionLength(0)))
                     .font(.largeTitle.bold().monospacedDigit())
                 Text("kcal")
                     .font(.headline)
@@ -66,11 +66,11 @@ struct NutritionSummary: View {
 
                 HStack {
                     Text(
-                        "\(totals.energy.formatted(.number.precision(.fractionLength(0...1)))) consumed"
+                        "\(totals.energy.formatted(.number.precision(.fractionLength(0)))) consumed"
                     )
                     Spacer()
                     Text(
-                        "\(target.formatted(.number.precision(.fractionLength(0...1)))) goal"
+                        "\(target.formatted(.number.precision(.fractionLength(0)))) goal"
                     )
                 }
                 .font(.subheadline.monospacedDigit())

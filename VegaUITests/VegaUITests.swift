@@ -599,6 +599,20 @@ final class WeightHistoryUITests: VegaUITestCase {
     }
 
     @MainActor
+    func testFormatsWeightForFinnishLocale() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "fi_FI"]
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Progress"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Progress"].tap()
+
+        let latest = app.descendants(matching: .any)["latest-weight"]
+        XCTAssertTrue(latest.waitForExistence(timeout: 5))
+        XCTAssertTrue(latest.label.contains("79,6 kg"))
+        capture("Weight history in Finnish locale")
+    }
+
+    @MainActor
     private func launchWeightFixture() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
