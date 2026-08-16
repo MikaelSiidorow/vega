@@ -123,6 +123,8 @@ struct DailyDiaryView: View {
                 model.selectPreviousDay()
             }
             .labelStyle(.iconOnly)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
 
             Spacer()
 
@@ -146,6 +148,8 @@ struct DailyDiaryView: View {
                 model.selectNextDay()
             }
             .labelStyle(.iconOnly)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .padding(.horizontal)
         .padding(.vertical, 10)

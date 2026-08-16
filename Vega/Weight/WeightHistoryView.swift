@@ -164,27 +164,23 @@ struct WeightHistoryView: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(Self.weightText(entry.weight))
-                    .font(.system(size: 46, weight: .bold, design: .rounded))
-                Text("kg")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
+                Text(Self.weightMeasurement(entry.weight), format: Self.weightFormat)
+                    .font(.largeTitle.bold().monospacedDigit())
                 Spacer()
                 if let change = model.changeInRange {
                     Label(
-                        "\(Self.signedWeightText(change)) kg",
+                        Self.signedWeightMeasurementText(change),
                         systemImage: change <= 0 ? "arrow.down.right" : "arrow.up.right"
                     )
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(change <= 0 ? .green : .orange)
+                    .foregroundStyle(.secondary)
                 }
             }
             Text(entry.date, format: .dateTime.weekday().day().month().hour().minute())
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .vegaCard()
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("latest-weight")
     }
@@ -226,17 +222,23 @@ struct WeightHistoryView: View {
         NSDecimalNumber(decimal: value).doubleValue
     }
 
-    static func weightText(_ value: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.minimumFractionDigits = 1
-        formatter.maximumFractionDigits = 2
-        formatter.decimalSeparator = "."
-        return formatter.string(from: NSDecimalNumber(decimal: value)) ?? "—"
+    fileprivate static let weightFormat = Measurement<UnitMass>.FormatStyle(
+        width: .abbreviated,
+        usage: .asProvided,
+        numberFormatStyle: .number.precision(.fractionLength(1...2))
+    )
+
+    fileprivate static func weightMeasurement(_ value: Decimal) -> Measurement<UnitMass> {
+        Measurement(value: double(value), unit: .kilograms)
     }
 
-    private static func signedWeightText(_ value: Decimal) -> String {
+    static func weightText(_ value: Decimal) -> String {
+        value.formatted(.number.precision(.fractionLength(1...2)))
+    }
+
+    private static func signedWeightMeasurementText(_ value: Decimal) -> String {
         let prefix = value > 0 ? "+" : ""
-        return prefix + weightText(value)
+        return prefix + weightMeasurement(value).formatted(weightFormat)
     }
 }
 
@@ -253,9 +255,12 @@ private struct WeightEntryRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text("\(WeightHistoryView.weightText(entry.weight)) kg")
-                .font(.headline.monospacedDigit())
-                .foregroundStyle(.primary)
+            Text(
+                WeightHistoryView.weightMeasurement(entry.weight),
+                format: WeightHistoryView.weightFormat
+            )
+            .font(.headline.monospacedDigit())
+            .foregroundStyle(.primary)
         }
         .contentShape(Rectangle())
     }
