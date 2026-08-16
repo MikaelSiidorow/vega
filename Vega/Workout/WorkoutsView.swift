@@ -257,8 +257,13 @@ struct WorkoutsView: View {
         repetitionUnits: [WorkoutRepetitionUnit]
     ) -> String {
         let repetitionUnit =
-            repetitionUnits.first { $0.id == log.repetitionsUnitID }?.name ?? "reps"
-        let weightUnit = weightUnits.first { $0.id == log.weightUnitID }?.name ?? "kg"
+            repetitionUnits.first { $0.id == log.repetitionsUnitID }.map {
+                workoutUnitName($0.name)
+            } ?? "reps"
+        let weightUnit =
+            weightUnits.first { $0.id == log.weightUnitID }.map {
+                workoutUnitName($0.name)
+            } ?? "kg"
         return "\(log.repetitions ?? "—") \(repetitionUnit) · \(log.weight ?? "—") \(weightUnit)"
     }
 }

@@ -17,6 +17,7 @@ struct WorkoutSessionView: View {
     @State private var completedInSession = 0
     @State private var startedAt: Date?
     @State private var completedAt: Date?
+    @State private var restStart = Date()
     @State private var restEnd = Date()
     @State private var lastInputByExercise: [Int: WorkoutSetInput] = [:]
     @State private var inputByStep: [String: WorkoutSetInput] = [:]
@@ -143,7 +144,7 @@ struct WorkoutSessionView: View {
                     VStack(alignment: .leading, spacing: VegaSpacing.small) {
                         Text(step.plan.name)
                             .font(.largeTitle.bold())
-                        Text("Set \(step.setNumber) of \(step.plan.setCount)")
+                        Text("Exercise set \(step.setNumber) of \(step.plan.setCount)")
                             .font(.title3)
                             .foregroundStyle(.secondary)
                         if let comment = step.plan.comment {
@@ -177,7 +178,10 @@ struct WorkoutSessionView: View {
                             completedAt = Date()
                             phase = .summary
                         } else {
-                            restEnd = Date().addingTimeInterval(TimeInterval(step.plan.restSeconds))
+                            restStart = Date()
+                            restEnd = restStart.addingTimeInterval(
+                                TimeInterval(step.plan.restSeconds)
+                            )
                             phase = .resting
                         }
                         return true
@@ -201,11 +205,13 @@ struct WorkoutSessionView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("workout-rest")
                 Text(restDescription(at: context.date))
-                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Color.accentColor)
                     .contentTransition(.numericText())
                     .accessibilityIdentifier("workout-rest-timer")
+                ProgressView(value: restProgress(at: context.date))
+                    .tint(.accentColor)
                 if let nextStep {
                     VStack(spacing: VegaSpacing.compact) {
                         Text("Up next")
@@ -218,19 +224,13 @@ struct WorkoutSessionView: View {
                     }
                 }
                 Spacer()
-                Button {
-                    advanceAfterRest()
-                } label: {
-                    Label(
-                        secondsRemaining > 0 ? "Skip rest" : "Next set",
-                        systemImage: secondsRemaining > 0 ? "forward.fill" : "arrow.right"
-                    )
-                    .labelStyle(.titleAndIcon)
-                    .frame(maxWidth: .infinity)
+                if secondsRemaining > 0 {
+                    advanceButton(title: "Skip rest", systemImage: "forward.fill")
+                        .buttonStyle(.bordered)
+                } else {
+                    advanceButton(title: "Next set", systemImage: "arrow.right")
+                        .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .accessibilityIdentifier("advance-workout-after-rest")
             }
             .padding(VegaSpacing.spacious)
         }
@@ -261,18 +261,7 @@ struct WorkoutSessionView: View {
                             "\(session.completedSetCount + completedInSession)/\(session.totalSetCount)"
                     )
                     summaryMetric(title: "Exercises", value: "\(session.day.exercises.count)")
-                }
-
-                if let durationDescription {
-                    VStack(alignment: .leading, spacing: VegaSpacing.small) {
-                        Text("Duration")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text(durationDescription)
-                            .font(.title.weight(.semibold).monospacedDigit())
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .vegaCard()
+                    summaryMetric(title: "Duration", value: durationDescription ?? "—")
                 }
 
                 VStack(alignment: .leading, spacing: VegaSpacing.standard) {
@@ -323,7 +312,7 @@ struct WorkoutSessionView: View {
     private var durationDescription: String? {
         guard let startedAt, let completedAt else { return nil }
         return Duration.seconds(max(0, completedAt.timeIntervalSince(startedAt))).formatted(
-            .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2)
+            .units(allowed: [.hours, .minutes, .seconds], width: .narrow, maximumUnitCount: 2)
         )
     }
 
@@ -352,7 +341,7 @@ struct WorkoutSessionView: View {
     private func sessionProgress(_ step: WorkoutSetStep) -> some View {
         VStack(alignment: .leading, spacing: VegaSpacing.small) {
             HStack {
-                Text("Set \(step.overallNumber) of \(step.totalSetCount)")
+                Text("Workout set \(step.overallNumber) of \(step.totalSetCount)")
                     .font(.headline.monospacedDigit())
                 Spacer()
                 if let startedAt {
@@ -473,8 +462,13 @@ struct WorkoutSessionView: View {
         weightUnitID: Int?
     ) -> String {
         let repetitionUnit =
-            repetitionUnits.first { $0.id == repetitionsUnitID }?.name ?? "reps"
-        let weightUnit = weightUnits.first { $0.id == weightUnitID }?.name ?? "kg"
+            repetitionUnits.first { $0.id == repetitionsUnitID }.map {
+                workoutUnitName($0.name)
+            } ?? "reps"
+        let weightUnit =
+            weightUnits.first { $0.id == weightUnitID }.map {
+                workoutUnitName($0.name)
+            } ?? "kg"
         let repetitionsDescription = measurementDescription(
             value: repetitions,
             unit: repetitionUnit,
@@ -504,6 +498,24 @@ struct WorkoutSessionView: View {
 
     private func restSecondsRemaining(at date: Date) -> Int {
         max(0, Int(restEnd.timeIntervalSince(date).rounded(.up)))
+    }
+
+    private func restProgress(at date: Date) -> Double {
+        let duration = restEnd.timeIntervalSince(restStart)
+        guard duration > 0 else { return 1 }
+        return min(1, max(0, date.timeIntervalSince(restStart) / duration))
+    }
+
+    private func advanceButton(title: String, systemImage: String) -> some View {
+        Button {
+            advanceAfterRest()
+        } label: {
+            Label(title, systemImage: systemImage)
+                .labelStyle(.titleAndIcon)
+                .frame(maxWidth: .infinity)
+        }
+        .controlSize(.large)
+        .accessibilityIdentifier("advance-workout-after-rest")
     }
 
     private func advanceAfterRest() {
@@ -630,7 +642,7 @@ struct WorkoutSetEntryForm: View {
     private var repetitionUnitPicker: some View {
         Picker("Repetition unit", selection: $repetitionUnitID) {
             ForEach(repetitionUnits) { unit in
-                Text(unit.name).tag(Optional(unit.id))
+                Text(workoutUnitName(unit.name)).tag(Optional(unit.id))
             }
         }
         .pickerStyle(.menu)
@@ -640,7 +652,7 @@ struct WorkoutSetEntryForm: View {
     private var weightUnitPicker: some View {
         Picker("Weight unit", selection: $weightUnitID) {
             ForEach(weightUnits) { unit in
-                Text(unit.name).tag(Optional(unit.id))
+                Text(workoutUnitName(unit.name)).tag(Optional(unit.id))
             }
         }
         .pickerStyle(.menu)
@@ -670,7 +682,7 @@ struct WorkoutSetEntryForm: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(VegaSpacing.comfortable)
                     .background(
-                        Color(uiColor: .tertiarySystemFill),
+                        Color(uiColor: .quaternarySystemFill),
                         in: RoundedRectangle(cornerRadius: 16, style: .continuous)
                     )
                     .accessibilityIdentifier(identifier)
@@ -700,7 +712,7 @@ struct WorkoutSetEntryForm: View {
                 }
                 .padding(VegaSpacing.small)
                 .background(
-                    Color(uiColor: .tertiarySystemFill),
+                    Color(uiColor: .quaternarySystemFill),
                     in: RoundedRectangle(cornerRadius: 16, style: .continuous)
                 )
             }
@@ -760,4 +772,14 @@ struct WorkoutSetEntryForm: View {
         )
         return value.isEmpty ? nil : value
     }
+}
+
+func workoutUnitName(_ name: String) -> String {
+    if name.localizedCaseInsensitiveCompare("Repetitions") == .orderedSame {
+        return "reps"
+    }
+    if name.localizedCaseInsensitiveCompare("Body Weight") == .orderedSame {
+        return "Body weight"
+    }
+    return name
 }
