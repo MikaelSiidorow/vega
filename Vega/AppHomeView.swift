@@ -50,6 +50,20 @@ struct AppHomeView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let syncModel {
+                let presentation = SyncStatusPresentation(syncModel.status)
+                if presentation.isAmbient {
+                    Label(presentation.title, systemImage: presentation.systemImage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(.bar)
+                        .accessibilityIdentifier("ambient-sync-status")
+                }
+            }
+        }
         .task { await syncModel?.monitor() }
     }
 }
