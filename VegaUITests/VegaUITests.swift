@@ -176,6 +176,8 @@ final class SyncStatusUITests: VegaUITestCase {
 
         let account = app.buttons["Account"]
         XCTAssertTrue(account.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["ambient-sync-status"].exists)
+        capture("Offline sync status")
         account.tap()
 
         let status = app.buttons["retry-sync"]
