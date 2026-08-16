@@ -61,6 +61,11 @@ struct BarcodeScannerView: View {
                         .disabled(ProductBarcode(manualCode) == nil)
                         .accessibilityIdentifier("submit-manual-barcode")
                     }
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") { isManualCodeFocused = false }
+                            .accessibilityIdentifier("done-manual-barcode")
+                    }
                 }
             }
         }
