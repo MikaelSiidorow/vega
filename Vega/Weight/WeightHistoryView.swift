@@ -122,10 +122,15 @@ struct WeightHistoryView: View {
                             description: Text("There are no entries in this time range.")
                         )
                     } else {
-                        weightChart
-                            .frame(height: 220)
-                            .padding(.vertical, 8)
-                            .accessibilityIdentifier("weight-chart")
+                        VStack(alignment: .leading, spacing: VegaSpacing.small) {
+                            weightChart
+                                .frame(height: 220)
+                                .accessibilityIdentifier("weight-chart")
+                            Text("Line shows the 7-day average")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 8)
                     }
                 }
 
@@ -169,7 +174,7 @@ struct WeightHistoryView: View {
                 Spacer()
                 if let change = model.changeInRange {
                     Label(
-                        Self.signedWeightMeasurementText(change),
+                        "\(Self.signedWeightMeasurementText(change)) in \(model.selectedRange.title)",
                         systemImage: change <= 0 ? "arrow.down.right" : "arrow.up.right"
                     )
                     .font(.subheadline.weight(.semibold))

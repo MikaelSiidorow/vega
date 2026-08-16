@@ -22,6 +22,7 @@ struct DiaryEntryCreator: View {
     @State private var isSaving = false
     @State private var searchError: String?
     @State private var suggestionError: String?
+    @FocusState private var isAmountFocused: Bool
     @Environment(\.barcodeScannerMode) private var barcodeScannerMode
 
     init(
@@ -47,7 +48,7 @@ struct DiaryEntryCreator: View {
                     ingredientResults
                 }
             }
-            .navigationTitle(selectedIngredient == nil ? "Add food" : "Choose portion")
+            .navigationTitle(selectedIngredient?.name ?? "Add food")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -73,6 +74,10 @@ struct DiaryEntryCreator: View {
                         }
                         .accessibilityIdentifier("scan-barcode")
                     }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isAmountFocused = false }
                 }
             }
             .overlay {
@@ -280,16 +285,13 @@ struct DiaryEntryCreator: View {
     private func portionForm(_ ingredient: WgerIngredient) -> some View {
         Form {
             Section {
-                LabeledContent("Ingredient", value: ingredient.name)
-                if let brand = ingredient.brand, !brand.isEmpty {
-                    LabeledContent("Brand", value: brand)
+                LabeledContent("Amount") {
+                    TextField("Amount", text: $amount)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .focused($isAmountFocused)
+                        .accessibilityIdentifier("diary-create-amount")
                 }
-            }
-
-            Section("Amount") {
-                TextField("Amount", text: $amount)
-                    .keyboardType(.decimalPad)
-                    .accessibilityIdentifier("diary-create-amount")
                 Picker("Unit", selection: $weightUnitID) {
                     Text("grams").tag(nil as Int?)
                     ForEach(ingredient.weightUnits, id: \.id) { unit in
@@ -298,12 +300,15 @@ struct DiaryEntryCreator: View {
                 }
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("diary-create-unit")
-            }
-
-            Section("Before adding") {
                 LabeledContent("Gram equivalent", value: gramDescription(ingredient))
                     .accessibilityIdentifier("diary-create-grams")
                 nutritionPreview(ingredient)
+            } header: {
+                Text("Portion")
+            } footer: {
+                if let brand = ingredient.brand, !brand.isEmpty {
+                    Text(brand)
+                }
             }
 
             Section("When and where") {
