@@ -104,7 +104,6 @@ struct WorkoutSessionView: View {
                         systemImage: "checkmark.circle.fill"
                     )
                     .font(.headline)
-                    .foregroundStyle(.green)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .vegaCard()
                 }

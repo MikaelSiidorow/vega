@@ -250,6 +250,8 @@ struct ContentView: View {
                             Spacer()
                         }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                     .disabled(!model.canVerifyMFA)
                     .accessibilityIdentifier("verify-mfa")
                 }
@@ -332,6 +334,8 @@ struct ContentView: View {
                         Spacer()
                     }
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .disabled(!model.canSignIn)
             }
 

@@ -27,6 +27,7 @@ struct BarcodeScannerView: View {
     @State private var phase = CameraPhase.checking
     @State private var manualCode = ""
     @State private var scannerMessage: String?
+    @FocusState private var isManualCodeFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -50,6 +51,16 @@ struct BarcodeScannerView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", action: onCancel)
                         .accessibilityIdentifier("cancel-barcode-scanner")
+                }
+                if phase == .manual {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Search") {
+                            guard let barcode = ProductBarcode(manualCode) else { return }
+                            onScan(barcode)
+                        }
+                        .disabled(ProductBarcode(manualCode) == nil)
+                        .accessibilityIdentifier("submit-manual-barcode")
+                    }
                 }
             }
         }
@@ -159,23 +170,15 @@ struct BarcodeScannerView: View {
                 TextField("EAN, UPC, or GTIN", text: $manualCode)
                     .keyboardType(.numberPad)
                     .textContentType(.none)
+                    .focused($isManualCodeFocused)
                     .accessibilityIdentifier("manual-barcode-code")
             }
 
-            if !manualCode.isEmpty, ProductBarcode(manualCode) == nil {
+            if !isManualCodeFocused, !manualCode.isEmpty, ProductBarcode(manualCode) == nil {
                 Section {
                     Text("Enter an 8-, 12-, 13-, or 14-digit product code.")
                         .foregroundStyle(.red)
                 }
-            }
-
-            Section {
-                Button("Search for product") {
-                    guard let barcode = ProductBarcode(manualCode) else { return }
-                    onScan(barcode)
-                }
-                .disabled(ProductBarcode(manualCode) == nil)
-                .accessibilityIdentifier("submit-manual-barcode")
             }
         }
         .accessibilityIdentifier("manual-barcode-entry")
