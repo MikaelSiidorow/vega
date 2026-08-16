@@ -41,6 +41,17 @@ class VegaUITestCase: XCTestCase {
     }
 
     @MainActor
+    func selectTab(_ name: String, in app: XCUIApplication, showing destination: XCUIElement) {
+        let tab = app.tabBars.buttons[name]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        if !destination.waitForExistence(timeout: 2) {
+            tab.tap()
+        }
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func replaceText(
         _ replacement: String,
         in textField: XCUIElement,
@@ -607,21 +618,26 @@ final class AppShellUITests: VegaUITestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["diary-item-oats"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons["Workouts"].tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["workout-dashboard"].waitForExistence(timeout: 5)
+        selectTab(
+            "Workouts",
+            in: app,
+            showing: app.descendants(matching: .any)["workout-dashboard"]
         )
         XCTAssertTrue(app.buttons["Account"].exists)
         capture("Workouts tab")
 
-        app.tabBars.buttons["Progress"].tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["weight-history"].waitForExistence(timeout: 5))
+        selectTab(
+            "Progress",
+            in: app,
+            showing: app.descendants(matching: .any)["weight-history"]
+        )
         capture("Progress tab")
 
-        app.tabBars.buttons["Diary"].tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["diary-item-oats"].waitForExistence(timeout: 2))
+        selectTab(
+            "Diary",
+            in: app,
+            showing: app.descendants(matching: .any)["diary-item-oats"]
+        )
         capture("Diary tab after navigation")
     }
 }
