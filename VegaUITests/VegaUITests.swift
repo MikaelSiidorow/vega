@@ -51,6 +51,30 @@ class VegaUITestCase: XCTestCase {
         XCTAssertTrue(destination.waitForExistence(timeout: 5))
     }
 
+    @MainActor @discardableResult
+    func openDiaryEditor(for row: XCUIElement, in app: XCUIApplication) -> XCUIElement {
+        let editor = app.descendants(matching: .any)["diary-edit-date-time"]
+        row.tap()
+        if !editor.waitForExistence(timeout: 2) {
+            row.tap()
+        }
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        return editor
+    }
+
+    @MainActor
+    func openBarcodeScannerEntry(in app: XCUIApplication) -> XCUIElement {
+        let addFood = app.buttons["add-diary-entry"]
+        let scanBarcode = app.buttons["scan-barcode"]
+        XCTAssertTrue(addFood.waitForExistence(timeout: 5))
+        addFood.tap()
+        if !scanBarcode.waitForExistence(timeout: 2) {
+            addFood.tap()
+        }
+        XCTAssertTrue(scanBarcode.waitForExistence(timeout: 5))
+        return scanBarcode
+    }
+
     @MainActor
     func replaceText(
         _ replacement: String,
@@ -63,15 +87,10 @@ class VegaUITestCase: XCTestCase {
         }
         let current = textFieldText(textField, placeholder: placeholder)
         if !current.isEmpty {
-            textField.typeText(
-                String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count)
-            )
-            XCTAssertTrue(waitForText("", in: textField, placeholder: placeholder))
+            textField.tap(withNumberOfTaps: 3, numberOfTouches: 1)
         }
 
-        for character in replacement {
-            textField.typeText(String(character))
-        }
+        textField.typeText(replacement)
         XCTAssertTrue(waitForText(replacement, in: textField, placeholder: placeholder))
     }
 
@@ -191,14 +210,18 @@ final class PlannedMealsDiaryUITests: VegaUITestCase {
     @MainActor
     func testShowsPlannedMealsDiary() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-uiTestPlannedDiaryFixture", "-AppleLocale", "en_US"]
+        app.launchArguments += [
+            "-uiTestPlannedDiaryFixture", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge",
+        ]
         app.launch()
 
         assertPopulatedDiary(in: app)
         XCTAssertTrue(app.staticTexts["Planned meal targets"].exists)
 
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        screenshot.name = "Planned meals diary"
+        screenshot.name = "Planned meals diary with accessibility text"
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
@@ -250,15 +273,13 @@ final class EditDiaryAmountUITests: VegaUITestCase {
         app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
         app.launch()
 
-        let tofu = app.descendants(matching: .any)["diary-item-tofu"]
+        let tofu = app.buttons["diary-item-tofu"]
         XCTAssertTrue(tofu.waitForExistence(timeout: 5))
-        tofu.tap()
+        openDiaryEditor(for: tofu, in: app)
 
         let amount = app.textFields["diary-edit-amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 2))
-        focus(amount, in: app)
-        amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
-        amount.typeText("150")
+        replaceText("150", in: amount, using: app, placeholder: "Amount")
 
         let unit = app.descendants(matching: .any)["diary-edit-unit"]
         XCTAssertTrue(unit.exists)
@@ -296,14 +317,11 @@ final class EditDiaryMealUITests: VegaUITestCase {
         app.launchArguments += ["-uiTestPlannedDiaryFixture", "-AppleLocale", "en_US"]
         app.launch()
 
-        let tofu = app.descendants(matching: .any)["diary-item-tofu"]
+        let tofu = app.buttons["diary-item-tofu"]
         XCTAssertTrue(tofu.waitForExistence(timeout: 5))
-        tofu.tap()
+        let editorElement = openDiaryEditor(for: tofu, in: app)
 
-        XCTAssertTrue(
-            app.descendants(matching: .any)["diary-edit-date-time"]
-                .waitForExistence(timeout: 2)
-        )
+        XCTAssertTrue(editorElement.exists)
         let meal = app.descendants(matching: .any)["diary-edit-meal"]
         XCTAssertTrue(meal.exists)
         meal.tap()
@@ -415,9 +433,7 @@ final class AddDiaryEntryUITests: VegaUITestCase {
 
         let amount = app.textFields["diary-create-amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 2))
-        focus(amount, in: app)
-        amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
-        amount.typeText("2")
+        replaceText("2", in: amount, using: app, placeholder: "Amount")
 
         XCTAssertTrue(
             normalizedWhitespace(app.staticTexts["diary-create-grams"].label).contains("236 g")
@@ -457,10 +473,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
-        app.buttons["add-diary-entry"].tap()
-        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 5))
-        app.buttons["scan-barcode"].tap()
+        openBarcodeScannerEntry(in: app).tap()
 
         XCTAssertTrue(app.buttons["simulate-barcode-scan"].waitForExistence(timeout: 2))
         let scanner = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -504,10 +517,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.buttons["add-diary-entry"].waitForExistence(timeout: 5))
-        app.buttons["add-diary-entry"].tap()
-        XCTAssertTrue(app.buttons["scan-barcode"].waitForExistence(timeout: 5))
-        app.buttons["scan-barcode"].tap()
+        openBarcodeScannerEntry(in: app).tap()
 
         XCTAssertTrue(app.staticTexts["Scanner unavailable"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.buttons["manual-barcode-fallback"].exists)
@@ -521,6 +531,7 @@ final class BarcodeScannerUITests: VegaUITestCase {
         XCTAssertTrue(code.waitForExistence(timeout: 2))
         focus(code, in: app)
         code.typeText("1234")
+        app.buttons["done-manual-barcode"].tap()
         XCTAssertTrue(
             app.staticTexts["Enter an 8-, 12-, 13-, or 14-digit product code."]
                 .waitForExistence(timeout: 2)
@@ -587,6 +598,15 @@ final class WeightHistoryUITests: VegaUITestCase {
         XCTAssertTrue(created.label.contains("79.2 kg"))
         capture("Weight history after editing")
 
+        let history = app.descendants(matching: .any)["weight-history"]
+        history.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            .press(
+                forDuration: 0.1,
+                thenDragTo: history.coordinate(
+                    withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)
+                )
+            )
+        XCTAssertTrue(created.isHittable)
         created.swipeLeft()
         XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 2))
         app.buttons["Delete"].tap()
@@ -627,7 +647,9 @@ final class AppShellUITests: VegaUITestCase {
     @MainActor
     func testNavigatesBetweenPrimaryDestinationsWithoutLosingDiary() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-uiTestBasicDiaryFixture", "-AppleLocale", "en_US"]
+        app.launchArguments += [
+            "-uiTestBasicDiaryFixture", "-AppleLocale", "en_US", "-AppleInterfaceStyle", "Dark",
+        ]
         app.launch()
 
         XCTAssertTrue(app.tabBars.buttons["Diary"].waitForExistence(timeout: 5))
@@ -640,21 +662,21 @@ final class AppShellUITests: VegaUITestCase {
             showing: app.descendants(matching: .any)["workout-dashboard"]
         )
         XCTAssertTrue(app.buttons["Account"].exists)
-        capture("Workouts tab")
+        capture("Workouts tab dark")
 
         selectTab(
             "Progress",
             in: app,
             showing: app.descendants(matching: .any)["weight-history"]
         )
-        capture("Progress tab")
+        capture("Progress tab dark")
 
         selectTab(
             "Diary",
             in: app,
             showing: app.descendants(matching: .any)["diary-item-oats"]
         )
-        capture("Diary tab after navigation")
+        capture("Diary tab dark after navigation")
     }
 }
 
@@ -763,7 +785,7 @@ final class WorkoutUITests: VegaUITestCase {
         let firstSummarySet =
             app.descendants(matching: .any)["workout-summary-set-7-1"]
         XCTAssertTrue(firstSummarySet.exists)
-        XCTAssertTrue(firstSummarySet.label.contains("8 Repetitions · 60 kg"))
+        XCTAssertTrue(firstSummarySet.label.contains("8 reps · 60 kg"))
         capture("Focused workout summary")
         app.buttons["finish-workout"].tap()
         XCTAssertTrue(app.buttons["start-workout"].waitForExistence(timeout: 2))
