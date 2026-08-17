@@ -22,6 +22,108 @@ public enum WgerAPIModule {
         )
     }
 
+    /// Fetches the short-lived credentials used by the PowerSync SDK.
+    public static func powerSyncCredentials(
+        serverURL: URL,
+        accessToken: String
+    ) async throws -> WgerPowerSyncCredentials {
+        try await powerSyncCredentials(
+            client: authenticatedClient(serverURL: serverURL, accessToken: accessToken)
+        )
+    }
+
+    static func powerSyncCredentials(client: Client) async throws -> WgerPowerSyncCredentials {
+        let response = try await client.powersyncTokenRetrieve()
+        switch response {
+        case .ok(let response):
+            let body = try response.body.json
+            return WgerPowerSyncCredentials(token: body.token, endpoint: body.powersyncUrl)
+        case .undocumented(let statusCode, _):
+            throw WgerAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
+    /// Uploads one local PowerSync mutation through wger's typed OpenAPI contract.
+    public static func uploadPowerSyncData(
+        serverURL: URL,
+        accessToken: String,
+        method: WgerPowerSyncUploadMethod,
+        table: String,
+        data: any Sendable
+    ) async throws -> WgerPowerSyncUploadResult {
+        let request = Components.Schemas.PowersyncUploadRequest(
+            table: table,
+            data: try OpenAPIValueContainer(unvalidatedValue: data)
+        )
+        return try await uploadPowerSyncData(
+            client: authenticatedClient(serverURL: serverURL, accessToken: accessToken),
+            method: method,
+            request: request
+        )
+    }
+
+    static func uploadPowerSyncData(
+        client: Client,
+        method: WgerPowerSyncUploadMethod,
+        request: Components.Schemas.PowersyncUploadRequest
+    ) async throws -> WgerPowerSyncUploadResult {
+        switch method {
+        case .put:
+            switch try await client.uploadPowersyncDataUpdate(body: .json(request)) {
+            case .ok(let response):
+                return try uploadResult(from: response.body.json)
+            case .forbidden:
+                return .init(statusCode: 403)
+            case .internalServerError:
+                return .init(statusCode: 500)
+            case .serviceUnavailable:
+                return .init(statusCode: 503)
+            case .undocumented(let statusCode, _):
+                return .init(statusCode: statusCode)
+            }
+        case .patch:
+            switch try await client.uploadPowersyncDataPartialUpdate(
+                body: .json(
+                    .init(table: request.table, data: request.data)
+                )
+            ) {
+            case .ok(let response):
+                return try uploadResult(from: response.body.json)
+            case .forbidden:
+                return .init(statusCode: 403)
+            case .internalServerError:
+                return .init(statusCode: 500)
+            case .serviceUnavailable:
+                return .init(statusCode: 503)
+            case .undocumented(let statusCode, _):
+                return .init(statusCode: statusCode)
+            }
+        case .delete:
+            switch try await client.uploadPowersyncDataDestroy(body: .json(request)) {
+            case .ok(let response):
+                return try uploadResult(from: response.body.json)
+            case .forbidden:
+                return .init(statusCode: 403)
+            case .internalServerError:
+                return .init(statusCode: 500)
+            case .serviceUnavailable:
+                return .init(statusCode: 503)
+            case .undocumented(let statusCode, _):
+                return .init(statusCode: statusCode)
+            }
+        }
+    }
+
+    private static func uploadResult(
+        from response: Components.Schemas.PowersyncUploadResponse
+    ) -> WgerPowerSyncUploadResult {
+        .init(
+            statusCode: 200,
+            error: response.error,
+            details: response.details
+        )
+    }
+
     /// Proves that a token is accepted by requesting one authenticated resource.
     public static func nutritionPlanCount(
         serverURL: URL,
@@ -700,6 +802,34 @@ public struct BearerAuthenticationMiddleware: ClientMiddleware {
         var request = request
         request.headerFields[.authorization] = "Bearer \(accessToken)"
         return try await next(request, body, baseURL)
+    }
+}
+
+public struct WgerPowerSyncCredentials: Equatable, Sendable {
+    public let token: String
+    public let endpoint: String
+
+    public init(token: String, endpoint: String) {
+        self.token = token
+        self.endpoint = endpoint
+    }
+}
+
+public enum WgerPowerSyncUploadMethod: String, Equatable, Sendable {
+    case put = "PUT"
+    case patch = "PATCH"
+    case delete = "DELETE"
+}
+
+public struct WgerPowerSyncUploadResult: Equatable, Sendable {
+    public let statusCode: Int
+    public let error: String?
+    public let details: String?
+
+    public init(statusCode: Int, error: String? = nil, details: String? = nil) {
+        self.statusCode = statusCode
+        self.error = error
+        self.details = details
     }
 }
 
