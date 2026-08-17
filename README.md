@@ -20,7 +20,7 @@ PowerSync upload behavior, are adapted from the
 [wger server](https://github.com/wger-project/wger), Flutter client, and Vega
 are licensed under the GNU Affero General Public License.
 
-The checked-in OpenAPI snapshots originate from a wger 2.6 server and are
+The checked-in OpenAPI snapshots originate from a wger 2.7 server and are
 mechanically normalized for Apple's Swift OpenAPI Generator. Vega does not
 bundle wger's exercise, ingredient, or image catalogs. See [NOTICE.md](NOTICE.md)
 for provenance and third-party licensing details.
@@ -98,7 +98,7 @@ Open `Vega.xcodeproj` in Xcode or open the repository in Zed. Xcode is required
 to build the project.
 
 The `WgerAPI` local Swift package generates public Swift models and a typed
-client from the checked-in wger 2.6.0 OpenAPI snapshot. Xcode's workspace-level
+client from the checked-in wger 2.7 OpenAPI snapshot. Xcode's workspace-level
 `Package.resolved` is the single lockfile for the app and its local packages.
 Build the API package with:
 
@@ -106,7 +106,7 @@ Build the API package with:
 make build-wger-api
 ```
 
-Refresh the snapshot intentionally from a compatible wger 2.6 server, then
+Refresh the snapshot intentionally from a compatible wger 2.7 server, then
 rebuild it, with:
 
 ```sh
@@ -117,14 +117,14 @@ make build-wger-api
 Schema refresh additionally requires `curl` and `jq`; neither is needed for a
 normal build from a fresh clone.
 
-`refresh-wger-schema` rejects schemas that do not report wger 2.6.0. It keeps
+`refresh-wger-schema` rejects schemas outside the wger 2.7 series. It keeps
 the verbatim server response in `server-openapi.json` and derives
-`openapi.json` for Apple's generator. The derivation keeps JSON request bodies
-and aligns known serializer mismatches for nullable ingredient images,
-nutrition-plan values, and resolved workout-day sequences. It also omits
-unsupported image/video upload mutations and their seven request-only schemas.
-Their read and delete operations remain available. Generated Swift files are
-build artifacts and are not committed.
+`openapi.json` for Apple's generator. The derivation verifies the corrected
+ingredient, nutrition-plan, and resolved workout-day contracts, and keeps one
+narrow nullability correction for unset workout targets. It also keeps JSON
+request bodies and omits unsupported image/video upload mutations and their
+request-only schemas. Their read and delete operations remain available.
+Generated Swift files are build artifacts and are not committed.
 
 Format the handwritten Swift sources with:
 

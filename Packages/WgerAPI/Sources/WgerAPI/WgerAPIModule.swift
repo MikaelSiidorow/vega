@@ -76,9 +76,9 @@ public enum WgerAPIModule {
         serverURL: URL,
         accessToken: String,
         routineID: Int
-    ) async throws -> [Components.Schemas.WorkoutDayPlan] {
+    ) async throws -> [Components.Schemas.WorkoutDayDataGymMode] {
         let client = authenticatedClient(serverURL: serverURL, accessToken: accessToken)
-        let response = try await client.routineDateSequenceGymRetrieve(
+        let response = try await client.routineDateSequenceGymList(
             path: .init(id: routineID)
         )
         switch response {

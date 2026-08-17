@@ -7,15 +7,15 @@ import Testing
 
 struct WorkoutDayPlanContractTests {
     @Test
-    func decodesResolvedGymSequence() async throws {
+    func decodesResolvedGymSequenceWithUnsetTargets() async throws {
         let client = Client(
             serverURL: URL(string: "https://wger.example")!,
             configuration: .init(dateTranscoder: WgerDateTranscoder()),
             transport: WorkoutDayPlanFixtureTransport()
         )
 
-        let response = try await client.routineDateSequenceGymRetrieve(path: .init(id: 42))
-        let days: [Components.Schemas.WorkoutDayPlan]
+        let response = try await client.routineDateSequenceGymList(path: .init(id: 42))
+        let days: [Components.Schemas.WorkoutDayDataGymMode]
         switch response {
         case .ok(let response):
             days = try response.body.json
@@ -43,7 +43,7 @@ private struct WorkoutDayPlanFixtureTransport: ClientTransport {
         baseURL: URL,
         operationID: String
     ) async throws -> (HTTPResponse, HTTPBody?) {
-        #expect(operationID == "routine_date_sequence_gym_retrieve")
+        #expect(operationID == "routine_date_sequence_gym_list")
         #expect(request.path == "/api/v2/routine/42/date-sequence-gym/")
         return (
             HTTPResponse(status: .ok, headerFields: [.contentType: "application/json"]),

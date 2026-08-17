@@ -15,95 +15,19 @@ output_schema="$2"
 # omit only the affected write operations and their request-only schemas. Read
 # and delete operations remain generated.
 jq '
-    .components.schemas.IngredientThumbnails = {
-        "type": "object",
-        "description": "Thumbnail URLs generated for an ingredient image.",
-        "properties": {
-            "small": {"type": "string", "format": "uri"},
-            "medium": {"type": "string", "format": "uri"}
-        },
-        "required": ["small", "medium"]
-    }
-    | .components.schemas.IngredientInfo.properties.image.nullable = true
-    | .components.schemas.IngredientInfo.properties.thumbnails = {
-        "allOf": [{"$ref": "#/components/schemas/IngredientThumbnails"}],
-        "nullable": true,
-        "readOnly": true
-    }
-    # The custom action uses NutritionalValuesSerializer, but schema generation
-    # infers the viewset default NutritionPlan serializer.
-    | .paths["/api/v2/nutritionplan/{id}/nutritional_values/"]
-        .get.responses["200"].content["application/json"].schema = {
-            "$ref": "#/components/schemas/NutritionalValues"
-        }
-    # The custom gym action returns WorkoutDayDataGymModeSerializer(many=True),
-    # but schema generation infers the viewset default Routine serializer.
-    | .components.schemas.WorkoutSetPlan = {
-        "type": "object",
-        "description": "One resolved exercise prescription in a workout slot.",
-        "properties": {
-            "slot_entry_id": {"type": "integer"},
-            "exercise": {"type": "integer"},
-            "sets": {"type": "integer"},
-            "max_sets": {"type": "integer", "nullable": true},
-            "weight": {"type": "string", "format": "decimal", "nullable": true},
-            "max_weight": {"type": "string", "format": "decimal", "nullable": true},
-            "weight_unit": {"type": "integer", "nullable": true},
-            "weight_rounding": {"type": "string", "format": "decimal", "nullable": true},
-            "repetitions": {"type": "string", "format": "decimal", "nullable": true},
-            "max_repetitions": {"type": "string", "format": "decimal", "nullable": true},
-            "repetitions_unit": {"type": "integer", "nullable": true},
-            "repetitions_rounding": {
-                "type": "string", "format": "decimal", "nullable": true
-            },
-            "rir": {"type": "string", "format": "decimal", "nullable": true},
-            "max_rir": {"type": "string", "format": "decimal", "nullable": true},
-            "rpe": {"type": "string", "format": "decimal", "nullable": true},
-            "rest": {"type": "string", "format": "decimal", "nullable": true},
-            "max_rest": {"type": "string", "format": "decimal", "nullable": true},
-            "type": {"type": "string"},
-            "text_repr": {"type": "string"},
-            "comment": {"type": "string"}
-        },
-        "required": [
-            "slot_entry_id", "exercise", "sets", "max_sets", "weight", "max_weight",
-            "weight_unit", "weight_rounding", "repetitions", "max_repetitions",
-            "repetitions_unit", "repetitions_rounding", "rir", "max_rir", "rpe", "rest",
-            "max_rest", "type", "text_repr", "comment"
-        ]
-    }
-    | .components.schemas.WorkoutSlotPlan = {
-        "type": "object",
-        "properties": {
-            "comment": {"type": "string"},
-            "is_superset": {"type": "boolean"},
-            "exercises": {"type": "array", "items": {"type": "integer"}},
-            "sets": {
-                "type": "array",
-                "items": {"$ref": "#/components/schemas/WorkoutSetPlan"}
-            }
-        },
-        "required": ["comment", "is_superset", "exercises", "sets"]
-    }
-    | .components.schemas.WorkoutDayPlan = {
-        "type": "object",
-        "properties": {
-            "iteration": {"type": "integer"},
-            "date": {"type": "string", "format": "date"},
-            "label": {"type": "string"},
-            "day": {"$ref": "#/components/schemas/Day"},
-            "slots": {
-                "type": "array",
-                "items": {"$ref": "#/components/schemas/WorkoutSlotPlan"}
-            }
-        },
-        "required": ["iteration", "date", "label", "day", "slots"]
-    }
-    | .paths["/api/v2/routine/{id}/date-sequence-gym/"]
-        .get.responses["200"].content["application/json"].schema = {
-            "type": "array",
-            "items": {"$ref": "#/components/schemas/WorkoutDayPlan"}
-        }
+    # The gym response can contain null for unset targets and rounding values,
+    # while the 2.7 schema marks those required fields as non-null strings.
+    .components.schemas.SetConfigData.properties |= with_entries(
+        .key as $key
+        | if ([
+            "max_sets", "weight", "max_weight", "weight_unit", "weight_rounding",
+            "repetitions", "max_repetitions", "repetitions_unit",
+            "repetitions_rounding", "rir", "max_rir", "rpe", "rest", "max_rest"
+        ] | index($key)) != null
+        then .value.nullable = true
+        else .
+        end
+    )
     |
     del(
         .paths["/api/v2/exerciseimage/"].post,
@@ -136,22 +60,31 @@ jq '
     )
 ' "$source_schema" > "$output_schema"
 
-# The serializer explicitly returns null when an ingredient has no usable
-# image. Older wger schemas documented both values as non-null (and thumbnails
-# as a string), so keep the generated contract aligned with the actual API.
+# These response contracts were incorrect in wger 2.6. Keep the refresh strict
+# so an older or regressed server schema cannot silently replace the snapshot.
 if ! jq -e '
     .components.schemas.IngredientInfo.properties.image.nullable == true
     and .components.schemas.IngredientInfo.properties.thumbnails.nullable == true
-    and .components.schemas.IngredientThumbnails.required == ["small", "medium"]
+    and .components.schemas.IngredientInfo.properties.thumbnails.allOf[0]."$ref"
+        == "#/components/schemas/Thumbnails"
 ' "$output_schema" >/dev/null; then
-    echo "Ingredient image nullability normalization failed" >&2
+    echo "Ingredient image contract validation failed" >&2
     exit 1
 fi
 
 if ! jq -e '
     (.paths["/api/v2/routine/{id}/date-sequence-gym/"]
         .get.responses["200"].content["application/json"].schema.type == "array")
-    and (.components.schemas.WorkoutSetPlan.required | index("slot_entry_id") != null)
+    and (.paths["/api/v2/routine/{id}/date-sequence-gym/"]
+        .get.responses["200"].content["application/json"].schema.items."$ref"
+        == "#/components/schemas/WorkoutDayDataGymMode")
+    and ([
+        .components.schemas.SetConfigData.properties[
+            "max_sets", "weight", "max_weight", "weight_unit", "weight_rounding",
+            "repetitions", "max_repetitions", "repetitions_unit",
+            "repetitions_rounding", "rir", "max_rir", "rpe", "rest", "max_rest"
+        ].nullable
+    ] | all)
 ' "$output_schema" >/dev/null; then
     echo "Workout day response normalization failed" >&2
     exit 1

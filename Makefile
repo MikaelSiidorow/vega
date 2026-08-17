@@ -52,7 +52,7 @@ build-wger-api:
 
 refresh-wger-schema:
 	@test -n "$(WGER_SCHEMA_URL)" || { \
-		echo 'Set WGER_SCHEMA_URL to a wger 2.6 OpenAPI schema URL.' >&2; \
+		echo 'Set WGER_SCHEMA_URL to a wger 2.7 OpenAPI schema URL.' >&2; \
 		exit 2; \
 	}
 	@temporary_directory="$$(mktemp -d /tmp/vega-schema.XXXXXX)"; \
@@ -62,7 +62,8 @@ refresh-wger-schema:
 		"$(WGER_SCHEMA_URL)" \
 		-o "$$temporary_directory/server-openapi.json"; \
 	test "$$(jq -r '.openapi' "$$temporary_directory/server-openapi.json")" = '3.0.3'; \
-	test "$$(jq -r '.info.version' "$$temporary_directory/server-openapi.json")" = '2.6.0'; \
+	test "$$(jq -r '.info.version | startswith("2.7.")' \
+		"$$temporary_directory/server-openapi.json")" = 'true'; \
 	sh Scripts/normalize-wger-openapi.sh \
 		"$$temporary_directory/server-openapi.json" \
 		"$$temporary_directory/openapi.json"; \

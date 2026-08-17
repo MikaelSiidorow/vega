@@ -8,10 +8,27 @@ import Testing
 struct IngredientInfoContractTests {
     @Test
     func decodesIngredientWithoutImage() async throws {
+        let ingredient = try await ingredient(from: Self.ingredientWithoutImage)
+
+        #expect(ingredient.name == "Fixture ingredient")
+        #expect(ingredient.image == nil)
+        #expect(ingredient.thumbnails == nil)
+    }
+
+    @Test
+    func decodesTypedIngredientImageAndThumbnails() async throws {
+        let ingredient = try await ingredient(from: Self.ingredientWithImage)
+
+        #expect(ingredient.image?.value1.image == "https://wger.example/media/ingredient.png")
+        #expect(ingredient.thumbnails?.value1.small == "https://wger.example/thumb-small.png")
+        #expect(ingredient.thumbnails?.value1.medium == "https://wger.example/thumb-medium.png")
+    }
+
+    private func ingredient(from body: String) async throws -> Components.Schemas.IngredientInfo {
         let client = Client(
             serverURL: URL(string: "https://wger.example")!,
             configuration: .init(dateTranscoder: WgerDateTranscoder()),
-            transport: IngredientFixtureTransport(body: Self.ingredientWithoutImage)
+            transport: IngredientFixtureTransport(body: body)
         )
 
         let response = try await client.ingredientinfoList(query: .init(limit: 1))
@@ -21,17 +38,15 @@ struct IngredientInfoContractTests {
             page = try response.body.json
         case .undocumented(let statusCode, _):
             Issue.record("Unexpected response status: \(statusCode)")
-            return
+            throw WgerAPIError.unexpectedStatus(statusCode)
         }
 
-        let ingredient = try #require(page.results.first)
-        #expect(ingredient.name == "Fixture ingredient")
-        #expect(ingredient.image == nil)
-        #expect(ingredient.thumbnails == nil)
+        return try #require(page.results.first)
     }
 
     private static let ingredientWithoutImage = #"""
         {
+          "count": 1,
           "next": null,
           "previous": null,
           "results": [{
@@ -49,7 +64,8 @@ struct IngredientInfoContractTests {
             "language": {
               "id": 2,
               "short_name": "en",
-              "full_name": "English"
+              "full_name": "English",
+              "full_name_en": "English"
             },
             "license": {
               "id": 1,
@@ -61,6 +77,35 @@ struct IngredientInfoContractTests {
           }]
         }
         """#
+
+    private static let ingredientWithImage =
+        ingredientWithoutImage
+        .replacingOccurrences(
+            of: #""image": null"#,
+            with: #"""
+                "image": {
+                  "id": 10,
+                  "uuid": "dc8297f7-5a20-4d6d-a8ee-e61c7962b544",
+                  "ingredient_id": 1,
+                  "ingredient_uuid": "7908c204-907f-4b1e-ad4e-f482e9769ade",
+                  "image": "https://wger.example/media/ingredient.png",
+                  "created": "2026-08-17T12:00:00Z",
+                  "last_update": "2026-08-17T12:00:00Z",
+                  "size": 1024,
+                  "width": 640,
+                  "height": 480
+                }
+                """#
+        )
+        .replacingOccurrences(
+            of: #""thumbnails": null"#,
+            with: #"""
+                "thumbnails": {
+                  "small": "https://wger.example/thumb-small.png",
+                  "medium": "https://wger.example/thumb-medium.png"
+                }
+                """#
+        )
 }
 
 private struct IngredientFixtureTransport: ClientTransport {

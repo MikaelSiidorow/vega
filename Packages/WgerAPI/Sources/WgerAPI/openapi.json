@@ -2,8 +2,12 @@
   "openapi": "3.0.3",
   "info": {
     "title": "wger",
-    "version": "2.6.0",
-    "description": "Self hosted FLOSS workout and fitness tracker"
+    "version": "2.7.0a2",
+    "description": "Self hosted FLOSS workout and fitness tracker.\n\n## Authentication\n\nSystem-wide data such as the exercise database, ingredients and units can be\nread without authenticating. Everything tied to a user account needs one of the\nfollowing, which are tried in this order:\n\n* `Authorization: Token <key>` with a personal API key. Users create one on the\n  API key page of their profile, e.g. `/en/user/api-key`.\n* `Authorization: Bearer <token>` with a JWT access token.\n* The session cookie, which is what a logged-in browser uses.\n\n## Pagination\n\nList endpoints take `limit` and `offset`, and answer with `count`, `next`,\n`previous` and `results`. The default page size is 20 and `limit` is capped\nat 999.\n\n`/api/v2/ingredient-sync/` is the exception. It uses cursor pagination so that\nsyncing the catalogue stays fast no matter how far a client has paginated. That\nresponse carries no `count`, and clients follow `next` instead of picking an\noffset.\n\n## Filtering and ordering\n\nMost list endpoints accept filters on a subset of their fields, plus `ordering`\nwith a field name that can be prefixed with `-` to reverse it. Both are listed\nper endpoint.\n\n## Unknown fields are dropped on write\n\nA field that the endpoint does not declare is ignored instead of rejected. Such\na request still answers 200 or 201, and the unknown field simply has no effect,\nso check a write against the response body rather than the status code.\n\n## Rate limits\n\nThe ingredient endpoints are rate limited because the catalogue holds millions\nof rows, and creating exercises is capped as well. Limits count per user for\nauthenticated callers and per IP otherwise. Exceeding one answers 429.\n",
+    "license": {
+      "name": "AGPL-3.0-or-later",
+      "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+    }
   },
   "paths": {
     "/api/v2/check-language/": {
@@ -13,6 +17,16 @@
         "tags": [
           "check-language"
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LanguageCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "security": [
           {
             "cookieAuth": []
@@ -21,7 +35,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -29,7 +46,17 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LanguageCheckResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "The input could not be detected as the given language, or the language itself is unknown"
           }
         }
       }
@@ -45,7 +72,8 @@
             "schema": {
               "type": "string"
             },
-            "description": "The name of the django permission such as \"exercises.change_muscle\""
+            "description": "The name of the django permission such as \"exercises.change_muscle\"",
+            "required": true
           }
         ],
         "tags": [
@@ -59,7 +87,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -67,7 +98,7 @@
           {}
         ],
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -156,6 +187,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "routine",
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "tags": [
@@ -169,7 +207,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -212,7 +253,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -258,7 +302,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -312,7 +359,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -365,7 +415,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -409,7 +462,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -480,7 +536,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -526,7 +585,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -597,7 +659,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -643,7 +708,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -750,7 +818,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -793,7 +864,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -838,7 +912,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -939,7 +1016,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -982,7 +1062,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1028,7 +1111,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1082,7 +1168,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1135,7 +1224,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1179,7 +1271,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1218,7 +1313,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1272,7 +1370,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1325,7 +1426,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1369,7 +1473,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1440,7 +1547,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1483,7 +1593,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1529,7 +1642,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1583,7 +1699,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1636,7 +1755,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1680,7 +1802,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1744,7 +1869,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1790,7 +1918,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1868,7 +1999,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1911,7 +2045,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -1957,7 +2094,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2011,7 +2151,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2064,7 +2207,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2108,7 +2254,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2193,7 +2342,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2239,7 +2391,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2283,7 +2438,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2299,7 +2457,7 @@
     "/api/v2/exerciseimage/{id}/thumbnails/": {
       "get": {
         "operationId": "exerciseimage_thumbnails_retrieve",
-        "description": "Return a list of the image's thumbnails",
+        "description": "Return the image's thumbnails, one per configured alias",
         "parameters": [
           {
             "in": "path",
@@ -2322,7 +2480,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2333,7 +2494,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExerciseImage"
+                  "$ref": "#/components/schemas/ImageThumbnails"
                 }
               }
             },
@@ -2345,7 +2506,7 @@
     "/api/v2/exerciseinfo/": {
       "get": {
         "operationId": "exerciseinfo_list",
-        "description": "Read-only info API endpoint for exercise objects, grouped by the exercise\nbase. Returns nested data structures for more easy and faster parsing and\nis the recommended way to access the exercise data.",
+        "description": "Serve the list from the per-exercise cache, hitting the DB only for misses.",
         "parameters": [
           {
             "in": "query",
@@ -2417,7 +2578,8 @@
             "name": "language__code",
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Filter by language code. Multiple values may be separated by commas. Unknown codes fall back to English."
           },
           {
             "name": "limit",
@@ -2552,7 +2714,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2598,7 +2763,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2684,7 +2852,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2730,7 +2901,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2774,7 +2948,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -2939,7 +3116,8 @@
             "name": "language__code",
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Filter by language code. Multiple values may be separated by commas. Unknown codes are ignored."
           },
           {
             "in": "query",
@@ -3156,7 +3334,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3243,7 +3424,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3289,7 +3473,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3470,7 +3657,8 @@
             "name": "language__code",
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Filter by language code. Multiple values may be separated by commas. Unknown codes are ignored."
           },
           {
             "in": "query",
@@ -3678,7 +3866,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3689,7 +3880,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedIngredientInfoList"
+                  "$ref": "#/components/schemas/CursorPaginatedIngredientInfoList"
                 }
               }
             },
@@ -3724,7 +3915,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3770,7 +3964,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3796,6 +3993,16 @@
         "description": "Calculates the nutritional values for current ingredient and\nthe given amount and unit.\n\nThis function basically just performs a multiplication (in the model), and\nis a candidate to be moved to pure AJAX calls, however doing it like this\nkeeps the logic nicely hidden and respects the DRY principle.",
         "parameters": [
           {
+            "in": "query",
+            "name": "amount",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The amount to calculate the values for",
+            "required": true
+          },
+          {
             "in": "path",
             "name": "id",
             "schema": {
@@ -3803,6 +4010,14 @@
             },
             "description": "A unique integer value identifying this ingredient.",
             "required": true
+          },
+          {
+            "in": "query",
+            "name": "unit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID of an ingredient weight unit. Defaults to grams."
           }
         ],
         "tags": [
@@ -3816,7 +4031,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -3827,7 +4045,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ingredient"
+                  "$ref": "#/components/schemas/IngredientValues"
                 }
               }
             },
@@ -3988,7 +4206,8 @@
             "name": "language__code",
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Filter by language code. Multiple values may be separated by commas. Unknown codes are ignored."
           },
           {
             "in": "query",
@@ -4205,7 +4424,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4251,7 +4473,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4277,6 +4502,16 @@
         "description": "Calculates the nutritional values for current ingredient and\nthe given amount and unit.\n\nThis function basically just performs a multiplication (in the model), and\nis a candidate to be moved to pure AJAX calls, however doing it like this\nkeeps the logic nicely hidden and respects the DRY principle.",
         "parameters": [
           {
+            "in": "query",
+            "name": "amount",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The amount to calculate the values for",
+            "required": true
+          },
+          {
             "in": "path",
             "name": "id",
             "schema": {
@@ -4284,6 +4519,14 @@
             },
             "description": "A unique integer value identifying this ingredient.",
             "required": true
+          },
+          {
+            "in": "query",
+            "name": "unit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID of an ingredient weight unit. Defaults to grams."
           }
         ],
         "tags": [
@@ -4297,7 +4540,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4308,7 +4554,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IngredientInfo"
+                  "$ref": "#/components/schemas/IngredientValues"
                 }
               }
             },
@@ -4382,7 +4628,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4428,7 +4677,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4463,7 +4715,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4471,7 +4726,14 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshTokenResponse"
+                }
+              }
+            },
+            "description": ""
           }
         }
       }
@@ -4534,7 +4796,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4580,7 +4845,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4665,7 +4933,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4711,7 +4982,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4836,7 +5110,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4879,7 +5156,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4925,7 +5205,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -4979,7 +5262,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5032,7 +5318,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5076,7 +5365,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5194,7 +5486,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5237,7 +5532,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5283,7 +5581,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5337,7 +5638,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5390,7 +5694,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5434,7 +5741,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5552,7 +5862,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5595,7 +5908,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5641,7 +5957,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5695,7 +6014,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5748,7 +6070,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5792,7 +6117,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5910,7 +6238,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5953,7 +6284,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -5999,7 +6333,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6053,7 +6390,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6106,7 +6446,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6150,7 +6493,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6268,7 +6614,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6311,7 +6660,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6357,7 +6709,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6411,7 +6766,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6464,7 +6822,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6508,7 +6869,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6588,7 +6952,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6631,7 +6998,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6678,7 +7048,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6733,7 +7106,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6787,7 +7163,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6832,7 +7211,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6872,7 +7254,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -6883,7 +7268,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Meal"
+                  "$ref": "#/components/schemas/NutritionalValues"
                 }
               }
             },
@@ -6972,7 +7357,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7015,7 +7403,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7062,7 +7453,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7117,7 +7511,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7171,7 +7568,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7216,7 +7616,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7256,7 +7659,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7267,7 +7673,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MealItem"
+                  "$ref": "#/components/schemas/NutritionalValues"
                 }
               }
             },
@@ -7404,7 +7810,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7447,7 +7856,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7533,7 +7945,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7576,7 +7991,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7623,7 +8041,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7678,7 +8099,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7732,7 +8156,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7777,7 +8204,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7817,7 +8247,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7872,7 +8305,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7926,7 +8362,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7971,7 +8410,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -7999,7 +8441,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8035,7 +8480,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8121,7 +8569,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8167,7 +8618,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8308,7 +8762,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8351,7 +8808,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8398,7 +8858,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8453,7 +8916,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8507,7 +8973,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8552,7 +9021,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8592,7 +9064,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8603,7 +9078,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LogItem"
+                  "$ref": "#/components/schemas/NutritionalValues"
                 }
               }
             },
@@ -8678,7 +9153,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8720,7 +9198,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8767,7 +9248,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8821,7 +9305,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8875,7 +9362,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8920,7 +9410,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -8960,7 +9453,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9046,7 +9542,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9058,49 +9557,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedNutritionPlanInfoList"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "operationId": "nutritionplaninfo_create",
-        "description": "Read-only info API endpoint for nutrition plan objects. Returns nested data\nstructures for more easy parsing.",
-        "tags": [
-          "nutritionplaninfo"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NutritionPlanInfoRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NutritionPlanInfo"
                 }
               }
             },
@@ -9136,7 +9592,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9152,153 +9611,6 @@
               }
             },
             "description": ""
-          }
-        }
-      },
-      "put": {
-        "operationId": "nutritionplaninfo_update",
-        "description": "Read-only info API endpoint for nutrition plan objects. Returns nested data\nstructures for more easy parsing.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "A UUID string identifying this nutrition plan.",
-            "required": true
-          }
-        ],
-        "tags": [
-          "nutritionplaninfo"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NutritionPlanInfoRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NutritionPlanInfo"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      },
-      "patch": {
-        "operationId": "nutritionplaninfo_partial_update",
-        "description": "Read-only info API endpoint for nutrition plan objects. Returns nested data\nstructures for more easy parsing.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "A UUID string identifying this nutrition plan.",
-            "required": true
-          }
-        ],
-        "tags": [
-          "nutritionplaninfo"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedNutritionPlanInfoRequest"
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NutritionPlanInfo"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      },
-      "delete": {
-        "operationId": "nutritionplaninfo_destroy",
-        "description": "Read-only info API endpoint for nutrition plan objects. Returns nested data\nstructures for more easy parsing.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "A UUID string identifying this nutrition plan.",
-            "required": true
-          }
-        ],
-        "tags": [
-          "nutritionplaninfo"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No response body"
           }
         }
       }
@@ -9330,7 +9642,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9341,7 +9656,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NutritionPlanInfo"
+                  "$ref": "#/components/schemas/NutritionalValues"
                 }
               }
             },
@@ -9364,7 +9679,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9372,7 +9690,14 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowersyncKeysResponse"
+                }
+              }
+            },
+            "description": ""
           }
         }
       }
@@ -9391,7 +9716,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9399,7 +9727,14 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowersyncTokenResponse"
+                }
+              }
+            },
+            "description": ""
           }
         }
       }
@@ -9470,7 +9805,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9516,7 +9854,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9641,7 +9982,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9684,7 +10028,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9730,7 +10077,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9784,7 +10134,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9837,7 +10190,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9881,7 +10237,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -9999,7 +10358,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10042,7 +10404,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10088,7 +10453,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10142,7 +10510,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10195,7 +10566,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10239,7 +10613,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10357,7 +10734,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10400,7 +10780,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10446,7 +10829,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10500,7 +10886,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10553,7 +10942,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10597,7 +10989,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10706,7 +11101,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10749,7 +11147,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10795,7 +11196,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10849,7 +11253,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10902,7 +11309,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10946,7 +11356,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -10961,9 +11374,32 @@
     },
     "/api/v2/routine/{id}/date-sequence-display/": {
       "get": {
-        "operationId": "routine_date_sequence_display_retrieve",
+        "operationId": "routine_date_sequence_display_list",
         "description": "Return the day sequence of the routine",
         "parameters": [
+          {
+            "in": "query",
+            "name": "created",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "description",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
           {
             "in": "path",
             "name": "id",
@@ -10972,6 +11408,44 @@
             },
             "description": "A unique integer value identifying this routine.",
             "required": true
+          },
+          {
+            "in": "query",
+            "name": "is_public",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_template",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
           }
         ],
         "tags": [
@@ -10985,53 +11459,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
           },
           {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Routine"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/v2/routine/{id}/date-sequence-gym/": {
-      "get": {
-        "operationId": "routine_date_sequence_gym_retrieve",
-        "description": "Return the day sequence of the routine",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "A unique integer value identifying this routine.",
-            "required": true
-          }
-        ],
-        "tags": [
-          "routine"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11044,7 +11475,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/WorkoutDayPlan"
+                    "$ref": "#/components/schemas/WorkoutDayDataDisplayMode"
                   }
                 }
               }
@@ -11054,11 +11485,34 @@
         }
       }
     },
-    "/api/v2/routine/{id}/logs/": {
+    "/api/v2/routine/{id}/date-sequence-gym/": {
       "get": {
-        "operationId": "routine_logs_retrieve",
-        "description": "Returns the logs for the routine",
+        "operationId": "routine_date_sequence_gym_list",
+        "description": "Return the day sequence of the routine",
         "parameters": [
+          {
+            "in": "query",
+            "name": "created",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "description",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
           {
             "in": "path",
             "name": "id",
@@ -11067,6 +11521,44 @@
             },
             "description": "A unique integer value identifying this routine.",
             "required": true
+          },
+          {
+            "in": "query",
+            "name": "is_public",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_template",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
           }
         ],
         "tags": [
@@ -11080,7 +11572,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11091,7 +11586,123 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Routine"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkoutDayDataGymMode"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v2/routine/{id}/logs/": {
+      "get": {
+        "operationId": "routine_logs_list",
+        "description": "Returns the logs for the routine",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "created",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "description",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this routine.",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "is_public",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_template",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "tags": [
+          "routine"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
+          },
+          {
+            "jwtAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogDisplay"
+                  }
                 }
               }
             },
@@ -11126,7 +11737,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11137,7 +11751,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Routine"
+                  "$ref": "#/components/schemas/LogStatsData"
                 }
               }
             },
@@ -11172,7 +11786,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11183,7 +11800,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Routine"
+                  "$ref": "#/components/schemas/RoutineStructure"
                 }
               }
             },
@@ -11329,7 +11946,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11474,7 +12094,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11517,7 +12140,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11563,7 +12189,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11617,7 +12246,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11670,7 +12302,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11714,7 +12349,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11778,7 +12416,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11824,7 +12465,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11895,7 +12539,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -11941,7 +12588,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12026,7 +12676,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12069,7 +12722,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12208,7 +12864,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12251,7 +12910,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12297,7 +12959,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12351,7 +13016,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12404,7 +13072,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12448,7 +13119,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12487,7 +13161,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12541,7 +13218,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12594,7 +13274,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12638,7 +13321,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12717,7 +13403,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12763,7 +13452,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -12960,7 +13652,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13006,7 +13701,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13081,24 +13779,6 @@
             }
           },
           {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of results to return per page.",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "offset",
-            "required": false,
-            "in": "query",
-            "description": "The initial index from which to return the results.",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
             "name": "ordering",
             "required": false,
             "in": "query",
@@ -13149,7 +13829,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13160,7 +13843,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedTrophyProgressList"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrophyProgress"
+                  }
                 }
               }
             },
@@ -13175,6 +13861,16 @@
         "tags": [
           "upload-powersync-data"
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PowersyncUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "security": [
           {
             "cookieAuth": []
@@ -13183,7 +13879,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13191,7 +13890,23 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowersyncUploadResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "The request is not authenticated"
+          },
+          "500": {
+            "description": "Unclassified server error, the client should retry"
+          },
+          "503": {
+            "description": "Transient database error, the client should retry"
           }
         }
       },
@@ -13200,6 +13915,15 @@
         "tags": [
           "upload-powersync-data"
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedPowersyncUploadRequest"
+              }
+            }
+          }
+        },
         "security": [
           {
             "cookieAuth": []
@@ -13208,7 +13932,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13216,7 +13943,23 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowersyncUploadResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "The request is not authenticated"
+          },
+          "500": {
+            "description": "Unclassified server error, the client should retry"
+          },
+          "503": {
+            "description": "Transient database error, the client should retry"
           }
         }
       },
@@ -13233,15 +13976,34 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
           }
         ],
         "responses": {
-          "204": {
-            "description": "No response body"
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowersyncUploadResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "The request is not authenticated"
+          },
+          "500": {
+            "description": "Unclassified server error, the client should retry"
+          },
+          "503": {
+            "description": "Transient database error, the client should retry"
           }
         }
       }
@@ -13290,7 +14052,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13336,7 +14101,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13538,7 +14306,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13584,7 +14355,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13606,37 +14380,8 @@
     },
     "/api/v2/userprofile/": {
       "get": {
-        "operationId": "userprofile_list",
-        "description": "Customized list view, that returns only the current user's data",
-        "parameters": [
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of results to return per page.",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "offset",
-            "required": false,
-            "in": "query",
-            "description": "The initial index from which to return the results.",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "ordering",
-            "required": false,
-            "in": "query",
-            "description": "Which field to use when ordering the results.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "userprofile_retrieve",
+        "description": "API endpoint for the user profile\n\nEvery user has exactly one profile, so this endpoint has no list and no\ndetail route: it always reads and writes the profile of the logged-in user.\nUpdating it takes a PATCH since wger 2.7; up to 2.6 it took a POST.",
         "tags": [
           "userprofile"
         ],
@@ -13648,7 +14393,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13659,7 +14407,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedUserprofileList"
+                  "$ref": "#/components/schemas/Userprofile"
                 }
               }
             },
@@ -13668,8 +14416,9 @@
         }
       },
       "post": {
-        "operationId": "userprofile_create",
-        "description": "API endpoint for the user profile\n\nThis endpoint works somewhat differently than the others since it always\nreturns the data for the currently logged-in user's profile. To update\nthe profile, use a POST request with the new data, not a PATCH.",
+        "operationId": "userprofile_update_legacy",
+        "description": "Updates the profile of the logged-in user, exactly like PATCH does.\n\nUse this if your client needs to work with wger 2.6 or older, which accept only POST on this endpoint. Servers from 2.7 on accept both, so prefer PATCH in this case.",
+        "summary": "Update the profile of servers up to wger 2.6",
         "tags": [
           "userprofile"
         ],
@@ -13690,58 +14439,16 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
           }
         ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Userprofile"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/v2/userprofile/{id}/": {
-      "get": {
-        "operationId": "userprofile_retrieve",
-        "description": "API endpoint for the user profile\n\nThis endpoint works somewhat differently than the others since it always\nreturns the data for the currently logged-in user's profile. To update\nthe profile, use a POST request with the new data, not a PATCH.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "A unique integer value identifying this user profile.",
-            "required": true
-          }
-        ],
-        "tags": [
-          "userprofile"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "jwtAuth": []
-          }
-        ],
+        "deprecated": true,
         "responses": {
           "200": {
             "content": {
@@ -13757,18 +14464,7 @@
       },
       "put": {
         "operationId": "userprofile_update",
-        "description": "API endpoint for the user profile\n\nThis endpoint works somewhat differently than the others since it always\nreturns the data for the currently logged-in user's profile. To update\nthe profile, use a POST request with the new data, not a PATCH.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "A unique integer value identifying this user profile.",
-            "required": true
-          }
-        ],
+        "description": "API endpoint for the user profile\n\nEvery user has exactly one profile, so this endpoint has no list and no\ndetail route: it always reads and writes the profile of the logged-in user.\nUpdating it takes a PATCH since wger 2.7; up to 2.6 it took a POST.",
         "tags": [
           "userprofile"
         ],
@@ -13789,7 +14485,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13810,18 +14509,7 @@
       },
       "patch": {
         "operationId": "userprofile_partial_update",
-        "description": "API endpoint for the user profile\n\nThis endpoint works somewhat differently than the others since it always\nreturns the data for the currently logged-in user's profile. To update\nthe profile, use a POST request with the new data, not a PATCH.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "A unique integer value identifying this user profile.",
-            "required": true
-          }
-        ],
+        "description": "API endpoint for the user profile\n\nEvery user has exactly one profile, so this endpoint has no list and no\ndetail route: it always reads and writes the profile of the logged-in user.\nUpdating it takes a PATCH since wger 2.7; up to 2.6 it took a POST.",
         "tags": [
           "userprofile"
         ],
@@ -13842,7 +14530,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13860,49 +14551,12 @@
             "description": ""
           }
         }
-      },
-      "delete": {
-        "operationId": "userprofile_destroy",
-        "description": "API endpoint for the user profile\n\nThis endpoint works somewhat differently than the others since it always\nreturns the data for the currently logged-in user's profile. To update\nthe profile, use a POST request with the new data, not a PATCH.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "A unique integer value identifying this user profile.",
-            "required": true
-          }
-        ],
-        "tags": [
-          "userprofile"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "tokenAuth": []
-          },
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No response body"
-          }
-        }
       }
     },
     "/api/v2/userprofile/verify-email/": {
-      "get": {
-        "operationId": "userprofile_verify_email_retrieve",
-        "description": "Verify the user's email address",
+      "post": {
+        "operationId": "userprofile_verify_email_create",
+        "description": "Verify the user's email address\n\nPOST only, a GET must not send out emails as a side effect",
         "tags": [
           "userprofile"
         ],
@@ -13914,7 +14568,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -13925,7 +14582,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Userprofile"
+                  "$ref": "#/components/schemas/VerifyEmailResponse"
                 }
               }
             },
@@ -13949,7 +14606,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14042,7 +14702,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14088,7 +14751,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14132,7 +14798,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14250,7 +14919,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14293,7 +14965,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14339,7 +15014,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14393,7 +15071,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14446,7 +15127,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14490,7 +15174,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14642,7 +15329,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14685,7 +15375,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14731,7 +15424,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14785,7 +15481,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14838,7 +15537,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -14882,7 +15584,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15318,7 +16023,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15361,7 +16069,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15408,7 +16119,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15463,7 +16177,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15517,7 +16234,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15562,7 +16282,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15671,7 +16394,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15713,7 +16439,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15760,7 +16489,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15814,7 +16546,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15868,7 +16603,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15913,7 +16651,10 @@
             "tokenAuth": []
           },
           {
-            "tokenAuth": []
+            "headlessJwtAuth": []
+          },
+          {
+            "oidcAuth": []
           },
           {
             "jwtAuth": []
@@ -15979,6 +16720,32 @@
           "name",
           "unit"
         ]
+      },
+      "CursorPaginatedIngredientInfoList": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "next": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?cursor=cD00ODY%3D\""
+          },
+          "previous": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?cursor=cj0xJnA9NDg3"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngredientInfo"
+            }
+          }
+        }
       },
       "Day": {
         "type": "object",
@@ -16057,6 +16824,55 @@
         },
         "required": [
           "routine"
+        ]
+      },
+      "DayStructure": {
+        "type": "object",
+        "description": "Day serializer",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "routine": {
+            "type": "integer"
+          },
+          "order": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "is_rest": {
+            "type": "boolean"
+          },
+          "need_logs_to_advance": {
+            "type": "boolean"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DayTypeEnum"
+          },
+          "config": {
+            "nullable": true
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotStructure"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "routine",
+          "slots"
         ]
       },
       "DayTypeEnum": {
@@ -16209,6 +17025,10 @@
             "format": "uuid",
             "readOnly": true
           },
+          "translation": {
+            "type": "integer",
+            "title": "Exercise"
+          },
           "alias": {
             "type": "string",
             "title": "Alias for an exercise",
@@ -16218,6 +17038,7 @@
         "required": [
           "alias",
           "id",
+          "translation",
           "uuid"
         ]
       },
@@ -16225,6 +17046,10 @@
         "type": "object",
         "description": "ExerciseAlias serializer",
         "properties": {
+          "translation": {
+            "type": "integer",
+            "title": "Exercise"
+          },
           "alias": {
             "type": "string",
             "minLength": 1,
@@ -16233,7 +17058,8 @@
           }
         },
         "required": [
-          "alias"
+          "alias",
+          "translation"
         ]
       },
       "ExerciseCategory": {
@@ -16267,6 +17093,10 @@
             "format": "uuid",
             "readOnly": true
           },
+          "translation": {
+            "type": "integer",
+            "title": "Exercise"
+          },
           "comment": {
             "type": "string",
             "description": "A comment about how to correctly do this exercise.",
@@ -16276,6 +17106,7 @@
         "required": [
           "comment",
           "id",
+          "translation",
           "uuid"
         ]
       },
@@ -16283,6 +17114,10 @@
         "type": "object",
         "description": "ExerciseComment serializer",
         "properties": {
+          "translation": {
+            "type": "integer",
+            "title": "Exercise"
+          },
           "comment": {
             "type": "string",
             "minLength": 1,
@@ -16291,7 +17126,8 @@
           }
         },
         "required": [
-          "comment"
+          "comment",
+          "translation"
         ]
       },
       "ExerciseImage": {
@@ -16321,7 +17157,12 @@
             "description": "Only JPEG, PNG and WebP formats are supported"
           },
           "thumbnails": {
-            "type": "string",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Thumbnails"
+              }
+            ],
+            "nullable": true,
             "readOnly": true
           },
           "is_main": {
@@ -16345,10 +17186,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -16357,17 +17206,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "author_history": {
             "type": "array",
@@ -16453,7 +17318,7 @@
           "license": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/Nested"
+                "$ref": "#/components/schemas/License"
               }
             ],
             "readOnly": true
@@ -16647,6 +17512,86 @@
           "translations"
         ]
       },
+      "ExerciseSubmissionAlias": {
+        "type": "object",
+        "description": "Alias serializer without ``translation``, for use inside a submission.\n\nA subclass rather than a modified instance of the parent: both would be named\nExerciseAlias in the schema, and the narrower one would win for the alias\nendpoint too.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias for an exercise",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "alias",
+          "id",
+          "uuid"
+        ]
+      },
+      "ExerciseSubmissionAliasRequest": {
+        "type": "object",
+        "description": "Alias serializer without ``translation``, for use inside a submission.\n\nA subclass rather than a modified instance of the parent: both would be named\nExerciseAlias in the schema, and the narrower one would win for the alias\nendpoint too.",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Alias for an exercise",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "alias"
+        ]
+      },
+      "ExerciseSubmissionComment": {
+        "type": "object",
+        "description": "Comment serializer without ``translation``, for use inside a submission.\n\nSee ExerciseSubmissionAliasSerializer for why this is a subclass.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "comment": {
+            "type": "string",
+            "description": "A comment about how to correctly do this exercise.",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "comment",
+          "id",
+          "uuid"
+        ]
+      },
+      "ExerciseSubmissionCommentRequest": {
+        "type": "object",
+        "description": "Comment serializer without ``translation``, for use inside a submission.\n\nSee ExerciseSubmissionAliasSerializer for why this is a subclass.",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A comment about how to correctly do this exercise.",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "comment"
+        ]
+      },
       "ExerciseSubmissionRequest": {
         "type": "object",
         "description": "Exercise submission serializer",
@@ -16821,10 +17766,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -16833,17 +17786,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "author_history": {
             "type": "array",
@@ -16901,7 +17870,7 @@
       },
       "ExerciseTranslationSubmission": {
         "type": "object",
-        "description": "Translation serializer used as a nested child of ``ExerciseSubmissionSerializer``.\n\nDiffers from the regular serializer only because:\n- the ``exercise`` FK isn't known until the parent creates it (passed via ``create()`` kwargs);\n- the payload also accepts nested ``aliases`` and ``comments`` lists,\n  which the regular CRUD endpoint doesn't.",
+        "description": "Translation serializer used as a nested child of ``ExerciseSubmissionSerializer``.\n\nDiffers from the regular serializer only because:\n- the ``exercise`` FK isn't known until the parent creates it (passed via ``create()`` kwargs);\n- the payload also accepts nested ``aliases`` and ``comments`` lists,\n  which the regular CRUD endpoint doesn't;\n- those take their ``translation`` from the parent, so they don't accept one.",
         "properties": {
           "name": {
             "type": "string",
@@ -16918,13 +17887,13 @@
           "aliases": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ExerciseAlias"
+              "$ref": "#/components/schemas/ExerciseSubmissionAlias"
             }
           },
           "comments": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ExerciseComment"
+              "$ref": "#/components/schemas/ExerciseSubmissionComment"
             }
           },
           "license_author": {
@@ -16942,7 +17911,7 @@
       },
       "ExerciseTranslationSubmissionRequest": {
         "type": "object",
-        "description": "Translation serializer used as a nested child of ``ExerciseSubmissionSerializer``.\n\nDiffers from the regular serializer only because:\n- the ``exercise`` FK isn't known until the parent creates it (passed via ``create()`` kwargs);\n- the payload also accepts nested ``aliases`` and ``comments`` lists,\n  which the regular CRUD endpoint doesn't.",
+        "description": "Translation serializer used as a nested child of ``ExerciseSubmissionSerializer``.\n\nDiffers from the regular serializer only because:\n- the ``exercise`` FK isn't known until the parent creates it (passed via ``create()`` kwargs);\n- the payload also accepts nested ``aliases`` and ``comments`` lists,\n  which the regular CRUD endpoint doesn't;\n- those take their ``translation`` from the parent, so they don't accept one.",
         "properties": {
           "name": {
             "type": "string",
@@ -16960,13 +17929,13 @@
           "aliases": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ExerciseAliasRequest"
+              "$ref": "#/components/schemas/ExerciseSubmissionAliasRequest"
             }
           },
           "comments": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ExerciseCommentRequest"
+              "$ref": "#/components/schemas/ExerciseSubmissionCommentRequest"
             }
           },
           "license_author": {
@@ -16981,6 +17950,21 @@
           "language",
           "name"
         ]
+      },
+      "ExerciseTypeEnum": {
+        "enum": [
+          "normal",
+          "warmup",
+          "dropset",
+          "myo",
+          "partial",
+          "forced",
+          "tut",
+          "iso",
+          "jump"
+        ],
+        "type": "string",
+        "description": "* `normal` - Normal\n* `warmup` - Warmup\n* `dropset` - Dropset\n* `myo` - Myo\n* `partial` - Partial\n* `forced` - Forced\n* `tut` - Tut\n* `iso` - Iso Hold\n* `jump` - Jump"
       },
       "ExerciseVideo": {
         "type": "object",
@@ -17047,10 +18031,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -17059,17 +18051,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "author_history": {
             "type": "array",
@@ -17154,10 +18162,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -17166,17 +18182,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "author_history": {
             "type": "array",
@@ -17200,15 +18232,6 @@
           "width"
         ]
       },
-      "FreetimeIntensityEnum": {
-        "enum": [
-          "1",
-          "2",
-          "3"
-        ],
-        "type": "string",
-        "description": "* `1` - Low\n* `2` - Medium\n* `3` - High"
-      },
       "GenderEnum": {
         "enum": [
           "1",
@@ -17216,6 +18239,39 @@
         ],
         "type": "string",
         "description": "* `1` - Male\n* `2` - Female"
+      },
+      "GroupedLogData": {
+        "type": "object",
+        "description": "Log Stats Data serializer",
+        "properties": {
+          "iteration": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LogData"
+            }
+          },
+          "weekly": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LogData"
+            }
+          },
+          "daily": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LogData"
+            }
+          },
+          "mesocycle": {
+            "$ref": "#/components/schemas/LogData"
+          }
+        },
+        "required": [
+          "daily",
+          "iteration",
+          "mesocycle",
+          "weekly"
+        ]
       },
       "Image": {
         "type": "object",
@@ -17255,6 +18311,27 @@
           "width"
         ]
       },
+      "ImageThumbnails": {
+        "type": "object",
+        "description": "An image's thumbnails, one entry per available size, plus the original.",
+        "properties": {
+          "small": {
+            "$ref": "#/components/schemas/ThumbnailAlias"
+          },
+          "medium": {
+            "$ref": "#/components/schemas/ThumbnailAlias"
+          },
+          "original": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "medium",
+          "original",
+          "small"
+        ]
+      },
       "ImpressionEnum": {
         "enum": [
           "1",
@@ -17288,12 +18365,20 @@
             "maxLength": 200
           },
           "source_url": {
-            "type": "string",
-            "format": "uri",
             "nullable": true,
             "title": "Link",
             "description": "Link to product",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "code": {
             "type": "string",
@@ -17432,10 +18517,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -17444,17 +18537,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "language": {
             "type": "integer",
@@ -17535,10 +18644,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -17547,17 +18664,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           }
         },
         "required": [
@@ -17597,12 +18730,20 @@
             "maxLength": 200
           },
           "source_url": {
-            "type": "string",
-            "format": "uri",
             "nullable": true,
             "title": "Link",
             "description": "Link to product",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "code": {
             "type": "string",
@@ -17735,7 +18876,7 @@
           "language": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/Nested"
+                "$ref": "#/components/schemas/Language"
               }
             ],
             "readOnly": true
@@ -17743,7 +18884,7 @@
           "license": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/Nested"
+                "$ref": "#/components/schemas/License"
               }
             ],
             "readOnly": true
@@ -17754,10 +18895,18 @@
             "maxLength": 300
           },
           "license_object_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to original object, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_author": {
             "type": "string",
@@ -17766,17 +18915,33 @@
             "maxLength": 3500
           },
           "license_author_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to author profile, if available",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
             "title": "Link to the original source, if this is a derivative work",
             "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           },
           "image": {
             "allOf": [
@@ -17790,7 +18955,7 @@
           "thumbnails": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/IngredientThumbnails"
+                "$ref": "#/components/schemas/Thumbnails"
               }
             ],
             "nullable": true,
@@ -17815,175 +18980,65 @@
           "weight_units"
         ]
       },
-      "IngredientInfoRequest": {
+      "IngredientValues": {
         "type": "object",
-        "description": "Ingredient info serializer",
+        "description": "Nutritional values for a given amount and unit of an ingredient.\n\nCarries the form errors instead of usable values when the amount or unit\nquery parameters don't validate.",
         "properties": {
-          "remote_id": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "source_name": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "source_url": {
-            "type": "string",
-            "format": "uri",
-            "nullable": true,
-            "title": "Link",
-            "description": "Link to product",
-            "maxLength": 200
-          },
-          "code": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "name": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 200
-          },
-          "common_name": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "brand": {
-            "type": "string",
-            "nullable": true,
-            "title": "Brand name of product",
-            "maxLength": 200
-          },
           "energy": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "description": "In kcal per 100g"
+            "type": "number",
+            "format": "double"
           },
           "protein": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double"
           },
           "carbohydrates": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double"
           },
           "carbohydrates_sugar": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "nullable": true,
-            "title": "Sugar content in carbohydrates",
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double",
+            "nullable": true
           },
           "fat": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double"
           },
           "fat_saturated": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "nullable": true,
-            "title": "Saturated fat content in fats",
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double",
+            "nullable": true
           },
           "fiber": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "nullable": true,
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double",
+            "nullable": true
           },
           "sodium": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,3})?$",
-            "nullable": true,
-            "description": "In g per 100g of product"
+            "type": "number",
+            "format": "double",
+            "nullable": true
           },
-          "is_vegan": {
-            "type": "boolean",
-            "nullable": true,
-            "title": "Vegan",
-            "description": "Whether the ingredient is suitable for a vegan diet"
-          },
-          "is_vegetarian": {
-            "type": "boolean",
-            "nullable": true,
-            "title": "Vegetarian",
-            "description": "Whether the ingredient is suitable for a vegetarian diet"
-          },
-          "nutriscore": {
-            "nullable": true,
-            "title": "Nutri-Score",
-            "description": "Nutri-Score grade from Open Food Facts\n\n* `a` - A\n* `b` - B\n* `c` - C\n* `d` - D\n* `e` - E",
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/NutriscoreEnum"
-              },
-              {
-                "$ref": "#/components/schemas/BlankEnum"
-              },
-              {
-                "$ref": "#/components/schemas/NullEnum"
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
-            ]
-          },
-          "weight_units": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/IngredientWeightUnitRequest"
             }
-          },
-          "license_title": {
-            "type": "string",
-            "title": "The original title of this object, if available",
-            "maxLength": 300
-          },
-          "license_object_url": {
-            "type": "string",
-            "format": "uri",
-            "title": "Link to original object, if available",
-            "maxLength": 200
-          },
-          "license_author": {
-            "type": "string",
-            "title": "Author(s)",
-            "description": "If you are not the author, enter the name or source here.",
-            "maxLength": 3500
-          },
-          "license_author_url": {
-            "type": "string",
-            "format": "uri",
-            "title": "Link to author profile, if available",
-            "maxLength": 200
-          },
-          "license_derivative_source_url": {
-            "type": "string",
-            "format": "uri",
-            "title": "Link to the original source, if this is a derivative work",
-            "description": "Note that a derivative work is one which is not only based on a previous work, but which also contains sufficient new, creative content to entitle it to its own copyright.",
-            "maxLength": 200
           }
         },
         "required": [
           "carbohydrates",
+          "carbohydrates_sugar",
           "energy",
           "fat",
-          "name",
+          "fat_saturated",
+          "fiber",
           "protein",
-          "weight_units"
+          "sodium"
         ]
       },
       "IngredientWeightUnit": {
@@ -18022,26 +19077,14 @@
           "uuid"
         ]
       },
-      "IngredientWeightUnitRequest": {
-        "type": "object",
-        "description": "IngredientWeightUnit serializer",
-        "properties": {
-          "gram": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "title": "Amount in grams"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          }
-        },
-        "required": [
-          "gram",
-          "name"
-        ]
+      "IntensityEnum": {
+        "enum": [
+          "1",
+          "2",
+          "3"
+        ],
+        "type": "string",
+        "description": "* `1` - Low\n* `2` - Medium\n* `3` - High"
       },
       "Language": {
         "type": "object",
@@ -18075,6 +19118,38 @@
           "short_name"
         ]
       },
+      "LanguageCheckRequest": {
+        "type": "object",
+        "description": "Serializer for language check",
+        "properties": {
+          "language": {
+            "type": "integer"
+          },
+          "language_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "input": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "LanguageCheckResponse": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
       "License": {
         "type": "object",
         "description": "License serializer",
@@ -18094,18 +19169,81 @@
             "maxLength": 15
           },
           "url": {
-            "type": "string",
-            "format": "uri",
             "nullable": true,
             "title": "Link",
             "description": "Link to license text or other information",
-            "maxLength": 200
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
           }
         },
         "required": [
           "full_name",
           "id",
           "short_name"
+        ]
+      },
+      "LogData": {
+        "type": "object",
+        "description": "Log Stats Data serializer",
+        "properties": {
+          "exercises": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "muscle": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "upper_body": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          },
+          "lower_body": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          },
+          "total": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          }
+        },
+        "required": [
+          "exercises",
+          "lower_body",
+          "muscle",
+          "total",
+          "upper_body"
+        ]
+      },
+      "LogDisplay": {
+        "type": "object",
+        "description": "Log Display Data serializer",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/WorkoutSession"
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkoutLog"
+            }
+          }
+        },
+        "required": [
+          "logs",
+          "session"
         ]
       },
       "LogItem": {
@@ -18190,6 +19328,26 @@
           "amount",
           "ingredient",
           "plan"
+        ]
+      },
+      "LogStatsData": {
+        "type": "object",
+        "description": "Log Stats Data serializer",
+        "properties": {
+          "intensity": {
+            "$ref": "#/components/schemas/GroupedLogData"
+          },
+          "sets": {
+            "$ref": "#/components/schemas/GroupedLogData"
+          },
+          "volume": {
+            "$ref": "#/components/schemas/GroupedLogData"
+          }
+        },
+        "required": [
+          "intensity",
+          "sets",
+          "volume"
         ]
       },
       "MaxRepetitionsConfig": {
@@ -18661,36 +19819,6 @@
           "plan"
         ]
       },
-      "MealInfoRequest": {
-        "type": "object",
-        "description": "Meal info serializer",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "time": {
-            "type": "string",
-            "format": "time",
-            "nullable": true,
-            "title": "Time (approx)"
-          },
-          "name": {
-            "type": "string",
-            "description": "Give meals a textual description / name such as \"Breakfast\" or \"after workout\"",
-            "maxLength": 25
-          },
-          "meal_items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MealItemInfoRequest"
-            }
-          }
-        },
-        "required": [
-          "meal_items"
-        ]
-      },
       "MealItem": {
         "type": "object",
         "description": "MealItem serializer",
@@ -18763,7 +19891,8 @@
                 "$ref": "#/components/schemas/IngredientWeightUnit"
               }
             ],
-            "readOnly": true
+            "readOnly": true,
+            "nullable": true
           },
           "image": {
             "allOf": [
@@ -18771,7 +19900,8 @@
                 "$ref": "#/components/schemas/IngredientImage"
               }
             ],
-            "readOnly": true
+            "readOnly": true,
+            "nullable": true
           },
           "order": {
             "type": "integer",
@@ -18792,24 +19922,6 @@
           "order",
           "weight_unit",
           "weight_unit_obj"
-        ]
-      },
-      "MealItemInfoRequest": {
-        "type": "object",
-        "description": "Meal Item info serializer",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "amount": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$"
-          }
-        },
-        "required": [
-          "amount"
         ]
       },
       "MealItemRequest": {
@@ -18973,10 +20085,14 @@
           },
           "image_url_main": {
             "type": "string",
+            "nullable": true,
+            "description": "Absolute URL to the main muscle image",
             "readOnly": true
           },
           "image_url_secondary": {
             "type": "string",
+            "nullable": true,
+            "description": "Absolute URL to the secondary muscle image",
             "readOnly": true
           }
         },
@@ -18985,67 +20101,6 @@
           "image_url_main",
           "image_url_secondary",
           "name"
-        ]
-      },
-      "Nested": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "full_name": {
-            "type": "string",
-            "description": "If a license has been localized, e.g. the Creative Commons licenses for the different countries, add them as separate entries here.",
-            "maxLength": 60
-          },
-          "short_name": {
-            "type": "string",
-            "title": "Short name, e.g. CC-BY-SA 3",
-            "maxLength": 15
-          },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "nullable": true,
-            "title": "Link",
-            "description": "Link to license text or other information",
-            "maxLength": 200
-          }
-        },
-        "required": [
-          "full_name",
-          "id",
-          "short_name"
-        ]
-      },
-      "NestedRequest": {
-        "type": "object",
-        "properties": {
-          "short_name": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Language short name",
-            "description": "ISO 639-1",
-            "maxLength": 2
-          },
-          "full_name": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Language full name",
-            "maxLength": 30
-          },
-          "full_name_en": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Language full name in English",
-            "maxLength": 30
-          }
-        },
-        "required": [
-          "full_name",
-          "full_name_en",
-          "short_name"
         ]
       },
       "NullEnum": {
@@ -19205,74 +20260,6 @@
           "meals"
         ]
       },
-      "NutritionPlanInfoRequest": {
-        "type": "object",
-        "description": "Nutritional plan info serializer",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "start": {
-            "type": "string",
-            "format": "date",
-            "title": "Start date"
-          },
-          "end": {
-            "type": "string",
-            "format": "date",
-            "nullable": true,
-            "title": "End date"
-          },
-          "description": {
-            "type": "string",
-            "description": "A description of the goal of the plan, e.g. \"Gain mass\" or \"Prepare for summer\"",
-            "maxLength": 80
-          },
-          "only_logging": {
-            "type": "boolean"
-          },
-          "goal_energy": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_protein": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_carbohydrates": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_fat": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_fiber": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "meals": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MealInfoRequest"
-            }
-          }
-        },
-        "required": [
-          "meals"
-        ]
-      },
       "NutritionPlanRequest": {
         "type": "object",
         "description": "Nutritional plan serializer",
@@ -19350,7 +20337,8 @@
           },
           "carbohydrates_sugar": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "nullable": true
           },
           "fat": {
             "type": "number",
@@ -19358,63 +20346,18 @@
           },
           "fat_saturated": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "nullable": true
           },
           "fiber": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "nullable": true
           },
           "sodium": {
             "type": "number",
-            "format": "double"
-          }
-        },
-        "required": [
-          "carbohydrates",
-          "carbohydrates_sugar",
-          "energy",
-          "fat",
-          "fat_saturated",
-          "fiber",
-          "protein",
-          "sodium"
-        ]
-      },
-      "NutritionalValuesRequest": {
-        "type": "object",
-        "description": "Nutritional values serializer",
-        "properties": {
-          "energy": {
-            "type": "number",
-            "format": "double"
-          },
-          "protein": {
-            "type": "number",
-            "format": "double"
-          },
-          "carbohydrates": {
-            "type": "number",
-            "format": "double"
-          },
-          "carbohydrates_sugar": {
-            "type": "number",
-            "format": "double"
-          },
-          "fat": {
-            "type": "number",
-            "format": "double"
-          },
-          "fat_saturated": {
-            "type": "number",
-            "format": "double"
-          },
-          "fiber": {
-            "type": "number",
-            "format": "double"
-          },
-          "sodium": {
-            "type": "number",
-            "format": "double"
+            "format": "double",
+            "nullable": true
           }
         },
         "required": [
@@ -19874,20 +20817,25 @@
       "PaginatedIngredientInfoList": {
         "type": "object",
         "required": [
+          "count",
           "results"
         ],
         "properties": {
+          "count": {
+            "type": "integer",
+            "example": 123
+          },
           "next": {
             "type": "string",
             "nullable": true,
             "format": "uri",
-            "example": "http://api.example.org/accounts/?cursor=cD00ODY%3D\""
+            "example": "http://api.example.org/accounts/?offset=400&limit=100"
           },
           "previous": {
             "type": "string",
             "nullable": true,
             "format": "uri",
-            "example": "http://api.example.org/accounts/?cursor=cj0xJnA9NDg3"
+            "example": "http://api.example.org/accounts/?offset=200&limit=100"
           },
           "results": {
             "type": "array",
@@ -20703,37 +21651,6 @@
           }
         }
       },
-      "PaginatedTrophyProgressList": {
-        "type": "object",
-        "required": [
-          "count",
-          "results"
-        ],
-        "properties": {
-          "count": {
-            "type": "integer",
-            "example": 123
-          },
-          "next": {
-            "type": "string",
-            "nullable": true,
-            "format": "uri",
-            "example": "http://api.example.org/accounts/?offset=400&limit=100"
-          },
-          "previous": {
-            "type": "string",
-            "nullable": true,
-            "format": "uri",
-            "example": "http://api.example.org/accounts/?offset=200&limit=100"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TrophyProgress"
-            }
-          }
-        }
-      },
       "PaginatedUserStatisticsList": {
         "type": "object",
         "required": [
@@ -20792,37 +21709,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/UserTrophy"
-            }
-          }
-        }
-      },
-      "PaginatedUserprofileList": {
-        "type": "object",
-        "required": [
-          "count",
-          "results"
-        ],
-        "properties": {
-          "count": {
-            "type": "integer",
-            "example": 123
-          },
-          "next": {
-            "type": "string",
-            "nullable": true,
-            "format": "uri",
-            "example": "http://api.example.org/accounts/?offset=400&limit=100"
-          },
-          "previous": {
-            "type": "string",
-            "nullable": true,
-            "format": "uri",
-            "example": "http://api.example.org/accounts/?offset=200&limit=100"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Userprofile"
             }
           }
         }
@@ -21381,71 +22267,6 @@
           }
         }
       },
-      "PatchedNutritionPlanInfoRequest": {
-        "type": "object",
-        "description": "Nutritional plan info serializer",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "start": {
-            "type": "string",
-            "format": "date",
-            "title": "Start date"
-          },
-          "end": {
-            "type": "string",
-            "format": "date",
-            "nullable": true,
-            "title": "End date"
-          },
-          "description": {
-            "type": "string",
-            "description": "A description of the goal of the plan, e.g. \"Gain mass\" or \"Prepare for summer\"",
-            "maxLength": 80
-          },
-          "only_logging": {
-            "type": "boolean"
-          },
-          "goal_energy": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_protein": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_carbohydrates": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_fat": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "goal_fiber": {
-            "type": "integer",
-            "maximum": 2147483647,
-            "minimum": -2147483648,
-            "nullable": true
-          },
-          "meals": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MealInfoRequest"
-            }
-          }
-        }
-      },
       "PatchedNutritionPlanRequest": {
         "type": "object",
         "description": "Nutritional plan serializer",
@@ -21503,6 +22324,16 @@
             "minimum": -2147483648,
             "nullable": true
           }
+        }
+      },
+      "PatchedPowersyncUploadRequest": {
+        "type": "object",
+        "properties": {
+          "table": {
+            "type": "string",
+            "minLength": 1
+          },
+          "data": {}
         }
       },
       "PatchedRepetitionsConfigRequest": {
@@ -21677,7 +22508,7 @@
             "type": "integer"
           },
           "type": {
-            "$ref": "#/components/schemas/SlotEntryTypeEnum"
+            "$ref": "#/components/schemas/ExerciseTypeEnum"
           },
           "repetition_unit": {
             "type": "integer",
@@ -21827,7 +22658,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -21848,7 +22679,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -21869,7 +22700,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -22097,6 +22928,75 @@
         },
         "required": [
           "result"
+        ]
+      },
+      "PowersyncKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "PowersyncTokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "powersync_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "powersync_url",
+          "token"
+        ]
+      },
+      "PowersyncUploadRequest": {
+        "type": "object",
+        "properties": {
+          "table": {
+            "type": "string",
+            "minLength": 1
+          },
+          "data": {}
+        },
+        "required": [
+          "data",
+          "table"
+        ]
+      },
+      "PowersyncUploadResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "RefreshTokenResponse": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
         ]
       },
       "RepetitionUnit": {
@@ -22457,6 +23357,56 @@
           "start"
         ]
       },
+      "RoutineStructure": {
+        "type": "object",
+        "description": "Routine structure serializer",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 25
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Creation date"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start date"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End date"
+          },
+          "fit_in_week": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayStructure"
+            }
+          }
+        },
+        "required": [
+          "created",
+          "days",
+          "end",
+          "id",
+          "start"
+        ]
+      },
       "RoutineWeightUnit": {
         "type": "object",
         "description": "Weight unit serializer",
@@ -22473,6 +23423,130 @@
         "required": [
           "id",
           "name"
+        ]
+      },
+      "SetConfigData": {
+        "type": "object",
+        "description": "SetConfigData serializer",
+        "properties": {
+          "slot_entry_id": {
+            "type": "integer"
+          },
+          "exercise": {
+            "type": "integer"
+          },
+          "sets": {
+            "type": "integer"
+          },
+          "max_sets": {
+            "type": "integer",
+            "nullable": true
+          },
+          "weight": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "max_weight": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "weight_unit": {
+            "type": "integer",
+            "nullable": true
+          },
+          "weight_rounding": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "repetitions": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "max_repetitions": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "repetitions_unit": {
+            "type": "integer",
+            "nullable": true
+          },
+          "repetitions_rounding": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "rir": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,1}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "max_rir": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,1}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "rpe": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "rest": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "max_rest": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          },
+          "text_repr": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "comment",
+          "exercise",
+          "max_repetitions",
+          "max_rest",
+          "max_rir",
+          "max_sets",
+          "max_weight",
+          "repetitions",
+          "repetitions_rounding",
+          "repetitions_unit",
+          "rest",
+          "rir",
+          "rpe",
+          "sets",
+          "slot_entry_id",
+          "text_repr",
+          "type",
+          "weight",
+          "weight_rounding",
+          "weight_unit"
         ]
       },
       "SetNrConfig": {
@@ -22582,6 +23656,36 @@
           "id"
         ]
       },
+      "SlotData": {
+        "type": "object",
+        "description": "Slot Data serializer",
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "is_superset": {
+            "type": "boolean"
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "sets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetConfigData"
+            }
+          }
+        },
+        "required": [
+          "comment",
+          "exercises",
+          "is_superset",
+          "sets"
+        ]
+      },
       "SlotEntry": {
         "type": "object",
         "description": "Slot entry serializer",
@@ -22597,7 +23701,7 @@
             "type": "integer"
           },
           "type": {
-            "$ref": "#/components/schemas/SlotEntryTypeEnum"
+            "$ref": "#/components/schemas/ExerciseTypeEnum"
           },
           "repetition_unit": {
             "type": "integer",
@@ -22650,7 +23754,7 @@
             "type": "integer"
           },
           "type": {
-            "$ref": "#/components/schemas/SlotEntryTypeEnum"
+            "$ref": "#/components/schemas/ExerciseTypeEnum"
           },
           "repetition_unit": {
             "type": "integer",
@@ -22691,20 +23795,137 @@
           "slot"
         ]
       },
-      "SlotEntryTypeEnum": {
-        "enum": [
-          "normal",
-          "warmup",
-          "dropset",
-          "myo",
-          "partial",
-          "forced",
-          "tut",
-          "iso",
-          "jump"
-        ],
-        "type": "string",
-        "description": "* `normal` - Normal\n* `warmup` - Warmup\n* `dropset` - Dropset\n* `myo` - Myo\n* `partial` - Partial\n* `forced` - Forced\n* `tut` - Tut\n* `iso` - Iso Hold\n* `jump` - Jump"
+      "SlotEntryStructure": {
+        "type": "object",
+        "description": "Slot entry",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "slot": {
+            "type": "integer"
+          },
+          "exercise": {
+            "type": "integer"
+          },
+          "order": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "type": {
+            "$ref": "#/components/schemas/ExerciseTypeEnum"
+          },
+          "class_name": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "config": {
+            "nullable": true
+          },
+          "repetition_unit": {
+            "type": "integer",
+            "nullable": true
+          },
+          "repetition_rounding": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "repetitions_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepetitionsConfig"
+            }
+          },
+          "max_repetitions_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepetitionsConfig"
+            }
+          },
+          "weight_unit": {
+            "type": "integer",
+            "nullable": true,
+            "title": "Unit"
+          },
+          "weight_rounding": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,2})?$",
+            "nullable": true
+          },
+          "weight_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeightConfig"
+            }
+          },
+          "max_weight_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeightConfig"
+            }
+          },
+          "set_nr_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetNrConfig"
+            }
+          },
+          "max_set_nr_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaxSetNrConfig"
+            }
+          },
+          "rir_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiRConfig"
+            }
+          },
+          "max_rir_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaxRiRConfig"
+            }
+          },
+          "rest_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RestConfig"
+            }
+          },
+          "max_rest_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RestConfig"
+            }
+          }
+        },
+        "required": [
+          "exercise",
+          "id",
+          "max_repetitions_configs",
+          "max_rest_configs",
+          "max_rir_configs",
+          "max_set_nr_configs",
+          "max_weight_configs",
+          "repetitions_configs",
+          "rest_configs",
+          "rir_configs",
+          "set_nr_configs",
+          "slot",
+          "weight_configs"
+        ]
       },
       "SlotRequest": {
         "type": "object",
@@ -22731,6 +23952,43 @@
           "day"
         ]
       },
+      "SlotStructure": {
+        "type": "object",
+        "description": "Slot",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "day": {
+            "type": "integer",
+            "title": "Exercise day"
+          },
+          "order": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotEntryStructure"
+            }
+          },
+          "config": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "day",
+          "entries",
+          "id"
+        ]
+      },
       "StepEnum": {
         "enum": [
           "na",
@@ -22750,6 +24008,42 @@
         ],
         "type": "string",
         "description": "* `1` - Line\n* `2` - 3D\n* `3` - Low-poly\n* `4` - Photo\n* `5` - Other"
+      },
+      "ThumbnailAlias": {
+        "type": "object",
+        "description": "One generated thumbnail: where it is and the size it was generated for.",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "settings",
+          "url"
+        ]
+      },
+      "Thumbnails": {
+        "type": "object",
+        "description": "Shape of the ``thumbnails`` field, used for schema generation only.\n\nThe aliases are read from settings.THUMBNAIL_ALIASES and are the same for\nevery thumbnailed image in the API. Without this, the generated schema falls\nback to a plain string for the dict the method fields return.",
+        "properties": {
+          "small": {
+            "type": "string",
+            "format": "uri"
+          },
+          "medium": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "medium",
+          "small"
+        ]
       },
       "TokenRefresh": {
         "type": "object",
@@ -22807,14 +24101,18 @@
           },
           "name": {
             "type": "string",
+            "description": "Translate the trophy name",
             "readOnly": true
           },
           "description": {
             "type": "string",
+            "description": "Translate the trophy description",
             "readOnly": true
           },
           "image": {
             "type": "string",
+            "nullable": true,
+            "description": "Build absolute URL to trophy image, if possible.",
             "readOnly": true
           },
           "trophy_type": {
@@ -23199,7 +24497,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -23220,7 +24518,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -23241,7 +24539,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -23369,7 +24667,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -23390,7 +24688,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -23411,7 +24709,7 @@
             "description": "Approximately\n\n* `1` - Low\n* `2` - Medium\n* `3` - High",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/FreetimeIntensityEnum"
+                "$ref": "#/components/schemas/IntensityEnum"
               },
               {
                 "$ref": "#/components/schemas/NullEnum"
@@ -23437,6 +24735,23 @@
             "description": "Number of days after the last weight entry (enter 0 to deactivate)"
           }
         }
+      },
+      "VerifyEmailResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
       },
       "WeightConfig": {
         "type": "object",
@@ -23570,6 +24885,70 @@
         ],
         "type": "string",
         "description": "* `kg` - Metric (kilogram)\n* `lb` - Imperial (pound)"
+      },
+      "WorkoutDayDataDisplayMode": {
+        "type": "object",
+        "description": "WorkoutDayData serializer - display mode",
+        "properties": {
+          "iteration": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "label": {
+            "type": "string"
+          },
+          "day": {
+            "$ref": "#/components/schemas/Day"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotData"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "day",
+          "iteration",
+          "label",
+          "slots"
+        ]
+      },
+      "WorkoutDayDataGymMode": {
+        "type": "object",
+        "description": "WorkoutDayData serializer - gym mode",
+        "properties": {
+          "iteration": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "label": {
+            "type": "string"
+          },
+          "day": {
+            "$ref": "#/components/schemas/Day"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotData"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "day",
+          "iteration",
+          "label",
+          "slots"
+        ]
       },
       "WorkoutLog": {
         "type": "object",
@@ -23868,197 +25247,6 @@
             "title": "Finish time"
           }
         }
-      },
-      "IngredientThumbnails": {
-        "type": "object",
-        "description": "Thumbnail URLs generated for an ingredient image.",
-        "properties": {
-          "small": {
-            "type": "string",
-            "format": "uri"
-          },
-          "medium": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "required": [
-          "small",
-          "medium"
-        ]
-      },
-      "WorkoutSetPlan": {
-        "type": "object",
-        "description": "One resolved exercise prescription in a workout slot.",
-        "properties": {
-          "slot_entry_id": {
-            "type": "integer"
-          },
-          "exercise": {
-            "type": "integer"
-          },
-          "sets": {
-            "type": "integer"
-          },
-          "max_sets": {
-            "type": "integer",
-            "nullable": true
-          },
-          "weight": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "max_weight": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "weight_unit": {
-            "type": "integer",
-            "nullable": true
-          },
-          "weight_rounding": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "repetitions": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "max_repetitions": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "repetitions_unit": {
-            "type": "integer",
-            "nullable": true
-          },
-          "repetitions_rounding": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "rir": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "max_rir": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "rpe": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "rest": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "max_rest": {
-            "type": "string",
-            "format": "decimal",
-            "nullable": true
-          },
-          "type": {
-            "type": "string"
-          },
-          "text_repr": {
-            "type": "string"
-          },
-          "comment": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "slot_entry_id",
-          "exercise",
-          "sets",
-          "max_sets",
-          "weight",
-          "max_weight",
-          "weight_unit",
-          "weight_rounding",
-          "repetitions",
-          "max_repetitions",
-          "repetitions_unit",
-          "repetitions_rounding",
-          "rir",
-          "max_rir",
-          "rpe",
-          "rest",
-          "max_rest",
-          "type",
-          "text_repr",
-          "comment"
-        ]
-      },
-      "WorkoutSlotPlan": {
-        "type": "object",
-        "properties": {
-          "comment": {
-            "type": "string"
-          },
-          "is_superset": {
-            "type": "boolean"
-          },
-          "exercises": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "sets": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkoutSetPlan"
-            }
-          }
-        },
-        "required": [
-          "comment",
-          "is_superset",
-          "exercises",
-          "sets"
-        ]
-      },
-      "WorkoutDayPlan": {
-        "type": "object",
-        "properties": {
-          "iteration": {
-            "type": "integer"
-          },
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "label": {
-            "type": "string"
-          },
-          "day": {
-            "$ref": "#/components/schemas/Day"
-          },
-          "slots": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkoutSlotPlan"
-            }
-          }
-        },
-        "required": [
-          "iteration",
-          "date",
-          "label",
-          "day",
-          "slots"
-        ]
       }
     },
     "securitySchemes": {
@@ -24067,10 +25255,30 @@
         "in": "cookie",
         "name": "sessionid"
       },
+      "headlessJwtAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Access token issued by the allauth headless endpoints"
+      },
       "jwtAuth": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT"
+      },
+      "oidcAuth": {
+        "type": "oauth2",
+        "description": "Access token issued by the OAuth2/OIDC provider",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://wger.miksu.app/identity/o/authorize",
+            "tokenUrl": "https://wger.miksu.app/identity/o/api/token",
+            "scopes": {
+              "api:read": "View your training, nutrition and body data",
+              "api:write": "Add and change your training, nutrition and body data"
+            }
+          }
+        }
       },
       "tokenAuth": {
         "type": "apiKey",
@@ -24089,5 +25297,91 @@
       "url": "https://wger.de",
       "description": "The \"official\" upstream wger instance"
     }
-  ]
+  ],
+  "tags": [
+    {
+      "name": "exercise",
+      "description": "The exercise database. Related objects are referenced by ID. This is the writable endpoint of the two exercise representations."
+    },
+    {
+      "name": "exerciseinfo",
+      "description": "The same exercises read-only, with categories, muscles, equipment, images, videos and translations expanded inline. Meant for external tools and integrations: one request returns everything, with no IDs left to resolve."
+    },
+    {
+      "name": "ingredient",
+      "description": "Nutritional information per ingredient, referencing related objects by ID. Read-only and rate limited."
+    },
+    {
+      "name": "ingredientinfo",
+      "description": "The same ingredients read-only, with language, license, image and weight units expanded inline. Meant for external tools and integrations: one request returns everything, with no IDs left to resolve."
+    },
+    {
+      "name": "ingredient-sync",
+      "description": "The same data as ingredientinfo, but cursor paginated for mirroring the whole catalogue. No `count`, and only `next`/`previous` rather than arbitrary offsets. Combine with the `last_update__gt` filter for incremental syncs."
+    },
+    {
+      "name": "nutritionplan",
+      "description": "Nutrition plans, referencing meals and items by ID."
+    },
+    {
+      "name": "nutritionplaninfo",
+      "description": "The same plans read-only, with meals, items and their nutritional values expanded inline. Meant for external tools and integrations that want a whole plan in one request, with no IDs left to resolve."
+    },
+    {
+      "name": "routine",
+      "description": "Workout routines. The nested day, slot and config structure is available in one request under `/routine/{id}/structure/`."
+    },
+    {
+      "name": "templates",
+      "description": "Read-only view of the routines the user marked as a template, plus their trainer's, if they have one."
+    },
+    {
+      "name": "public-templates",
+      "description": "Read-only view of the routine templates published by other users."
+    },
+    {
+      "name": "weight-config",
+      "description": "Weight for a set, per iteration."
+    },
+    {
+      "name": "max-weight-config",
+      "description": "Upper limit for the weight of a set, per iteration."
+    },
+    {
+      "name": "repetitions-config",
+      "description": "Repetitions for a set, per iteration."
+    },
+    {
+      "name": "max-repetitions-config",
+      "description": "Upper limit for the repetitions of a set, per iteration."
+    },
+    {
+      "name": "sets-config",
+      "description": "Number of sets, per iteration."
+    },
+    {
+      "name": "max-sets-config",
+      "description": "Upper limit for the number of sets, per iteration."
+    },
+    {
+      "name": "rest-config",
+      "description": "Rest between sets, per iteration."
+    },
+    {
+      "name": "max-rest-config",
+      "description": "Upper limit for the rest between sets, per iteration."
+    },
+    {
+      "name": "rir-config",
+      "description": "Reps in reserve for a set, per iteration."
+    },
+    {
+      "name": "max-rir-config",
+      "description": "Upper limit for the reps in reserve of a set, per iteration."
+    }
+  ],
+  "externalDocs": {
+    "url": "https://wger.readthedocs.io",
+    "description": "wger documentation"
+  }
 }

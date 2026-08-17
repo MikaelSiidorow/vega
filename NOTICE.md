@@ -40,7 +40,7 @@ The following projects provided the API contract and product inspiration:
   an app-store exception.
 
 `Packages/WgerAPI/Sources/WgerAPI/server-openapi.json` is a verbatim OpenAPI
-snapshot produced by a wger 2.6 server. `openapi.json` is a mechanically
+snapshot produced by a wger 2.7 server. `openapi.json` is a mechanically
 normalized derivative used to generate Swift API types and client operations.
 The normalization keeps JSON request bodies and omits unsupported upload
 mutations and their request-only schemas. The original wger project and these
