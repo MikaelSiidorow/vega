@@ -87,7 +87,10 @@ class VegaUITestCase: XCTestCase {
         }
         let current = textFieldText(textField, placeholder: placeholder)
         if !current.isEmpty {
-            textField.tap(withNumberOfTaps: 3, numberOfTouches: 1)
+            textField.press(forDuration: 1)
+            let selectAll = app.menuItems["Select All"]
+            XCTAssertTrue(selectAll.waitForExistence(timeout: 2))
+            selectAll.tap()
         }
 
         textField.typeText(replacement)
