@@ -14005,6 +14005,16 @@
           "503": {
             "description": "Transient database error, the client should retry"
           }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PowersyncUploadRequest"
+              }
+            }
+          },
+          "required": true
         }
       }
     },

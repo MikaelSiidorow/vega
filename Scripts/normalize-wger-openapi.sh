@@ -15,6 +15,11 @@ output_schema="$2"
 # omit only the affected write operations and their request-only schemas. Read
 # and delete operations remain generated.
 jq '
+    # The PowerSync delete endpoint consumes the same record envelope as its
+    # put and patch siblings, but wger 2.7 omits that request body from OpenAPI.
+    .paths["/api/v2/upload-powersync-data"].delete.requestBody =
+        .paths["/api/v2/upload-powersync-data"].put.requestBody
+    |
     # The gym response can contain null for unset targets and rounding values,
     # while the 2.7 schema marks those required fields as non-null strings.
     .components.schemas.SetConfigData.properties |= with_entries(
@@ -62,6 +67,15 @@ jq '
 
 # These response contracts were incorrect in wger 2.6. Keep the refresh strict
 # so an older or regressed server schema cannot silently replace the snapshot.
+if ! jq -e '
+    .paths["/api/v2/upload-powersync-data"].delete.requestBody
+        .content["application/json"].schema."$ref"
+        == "#/components/schemas/PowersyncUploadRequest"
+' "$output_schema" >/dev/null; then
+    echo "PowerSync delete request normalization failed" >&2
+    exit 1
+fi
+
 if ! jq -e '
     .components.schemas.IngredientInfo.properties.image.nullable == true
     and .components.schemas.IngredientInfo.properties.thumbnails.nullable == true
