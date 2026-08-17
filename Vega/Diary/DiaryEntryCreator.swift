@@ -123,17 +123,20 @@ struct DiaryEntryCreator: View {
                     Button {
                         selectSearchResult(ingredient)
                     } label: {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(ingredient.name)
-                                .foregroundStyle(.primary)
-                            if let brand = ingredient.brand, !brand.isEmpty {
-                                Text(brand)
+                        HStack(spacing: 12) {
+                            ingredientThumbnail(ingredient)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(ingredient.name)
+                                    .foregroundStyle(.primary)
+                                if let brand = ingredient.brand, !brand.isEmpty {
+                                    Text(brand)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("\(ingredient.energy) kcal per 100 g")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            Text("\(ingredient.energy) kcal per 100 g")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -167,6 +170,23 @@ struct DiaryEntryCreator: View {
                     ?? "Vega could not search this server. Please try again."
             }
         }
+    }
+
+    private func ingredientThumbnail(_ ingredient: WgerIngredient) -> some View {
+        AsyncImage(url: ingredient.thumbnailURL) { phase in
+            if case .success(let image) = phase {
+                image
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "photo")
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .frame(width: 48, height: 48)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
