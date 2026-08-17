@@ -154,7 +154,8 @@ nonisolated struct PowerSyncInfrastructureTests {
             responses: [
                 WgerPowerSyncUploadResponse(
                     statusCode: 200,
-                    body: Data(#"{"error":"invalid data"}"#.utf8)
+                    error: "invalid data",
+                    details: nil
                 )
             ]
         )
@@ -195,7 +196,7 @@ nonisolated struct PowerSyncInfrastructureTests {
     }
 
     private static func response(_ statusCode: Int) -> WgerPowerSyncUploadResponse {
-        WgerPowerSyncUploadResponse(statusCode: statusCode, body: Data("{}".utf8))
+        WgerPowerSyncUploadResponse(statusCode: statusCode, error: nil, details: nil)
     }
 
     private static func session(instance: InstanceURL, subject: String) -> ActiveSession {

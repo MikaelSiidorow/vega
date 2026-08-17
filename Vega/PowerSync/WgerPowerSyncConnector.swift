@@ -1,5 +1,6 @@
 import Foundation
 import PowerSync
+import WgerAPI
 
 nonisolated struct WgerPowerSyncCredential: Equatable, Sendable {
     let endpoint: String
@@ -9,24 +10,23 @@ nonisolated struct WgerPowerSyncCredential: Equatable, Sendable {
 
 nonisolated struct WgerPowerSyncUploadResponse: Equatable, Sendable {
     let statusCode: Int
-    let body: Data
+    let error: String?
+    let details: String?
 
     var containsRejection: Bool {
-        guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
-            return false
-        }
-        return object["error"] != nil
+        error != nil
     }
 }
 
 nonisolated enum WgerPowerSyncRemoteError: Error, Equatable, Sendable, HTTPStatusProviding {
     case invalidCredentialsResponse
     case invalidEndpoint
+    case invalidUploadMethod(String)
     case status(Int)
 
     var statusCode: Int {
         switch self {
-        case .invalidCredentialsResponse, .invalidEndpoint: 0
+        case .invalidCredentialsResponse, .invalidEndpoint, .invalidUploadMethod: 0
         case .status(let status): status
         }
     }
@@ -39,49 +39,23 @@ nonisolated protocol WgerPowerSyncRemote: Sendable {
 }
 
 actor WgerPowerSyncRemoteAPI: WgerPowerSyncRemote {
-    private struct CredentialEnvelope: Decodable {
-        let token: String
-        let powersyncURL: String?
-
-        enum CodingKeys: String, CodingKey {
-            case token
-            case powersyncURL = "powersync_url"
-        }
-    }
-
-    private struct UploadEnvelope: Encodable {
-        let table: String
-        let data: JsonParam
-    }
-
     private let client: any AuthenticatedRequestExecuting
-    private let transport: any HTTPTransport
 
-    init(
-        client: any AuthenticatedRequestExecuting,
-        transport: any HTTPTransport = URLSessionHTTPTransport()
-    ) {
+    init(client: any AuthenticatedRequestExecuting) {
         self.client = client
-        self.transport = transport
     }
 
     func credentials() async throws -> WgerPowerSyncCredential {
-        try await client.perform { [transport] instance, session in
-            var request = URLRequest(url: instance.appending(path: "api/v2/powersync-token"))
-            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            let (data, response) = try await transport.data(for: request)
-            guard (200...299).contains(response.statusCode) else {
-                throw WgerPowerSyncRemoteError.status(response.statusCode)
-            }
-            let envelope = try JSONDecoder().decode(CredentialEnvelope.self, from: data)
-            guard !envelope.token.isEmpty else {
+        try await client.perform { instance, session in
+            let response = try await WgerAPIModule.powerSyncCredentials(
+                serverURL: instance.url,
+                accessToken: session.accessToken
+            )
+            guard !response.token.isEmpty else {
                 throw WgerPowerSyncRemoteError.invalidCredentialsResponse
             }
+            let endpoint = response.endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
             guard
-                let endpoint = envelope.powersyncURL?.trimmingCharacters(
-                    in: .whitespacesAndNewlines
-                ),
                 !endpoint.isEmpty,
                 let components = URLComponents(string: endpoint),
                 components.scheme == "https" || components.scheme == "http",
@@ -91,8 +65,8 @@ actor WgerPowerSyncRemoteAPI: WgerPowerSyncRemote {
             }
             return WgerPowerSyncCredential(
                 endpoint: endpoint,
-                token: envelope.token,
-                subject: JWTSubject.value(in: envelope.token)
+                token: response.token,
+                subject: JWTSubject.value(in: response.token)
             )
         }
     }
@@ -100,20 +74,40 @@ actor WgerPowerSyncRemoteAPI: WgerPowerSyncRemote {
     func upload(method: String, table: String, data: JsonParam) async throws
         -> WgerPowerSyncUploadResponse
     {
-        try await client.perform { [transport] instance, session in
-            var request = URLRequest(
-                url: instance.appending(path: "api/v2/upload-powersync-data")
+        guard let method = WgerPowerSyncUploadMethod(rawValue: method) else {
+            throw WgerPowerSyncRemoteError.invalidUploadMethod(method)
+        }
+        let payload = data.mapValues(\.sendableValue)
+        return try await client.perform { instance, session in
+            let response = try await WgerAPIModule.uploadPowerSyncData(
+                serverURL: instance.url,
+                accessToken: session.accessToken,
+                method: method,
+                table: table,
+                data: payload
             )
-            request.httpMethod = method
-            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(UploadEnvelope(table: table, data: data))
-            let (body, response) = try await transport.data(for: request)
             if response.statusCode == 401 {
                 throw WgerPowerSyncRemoteError.status(401)
             }
-            return WgerPowerSyncUploadResponse(statusCode: response.statusCode, body: body)
+            return WgerPowerSyncUploadResponse(
+                statusCode: response.statusCode,
+                error: response.error,
+                details: response.details
+            )
+        }
+    }
+}
+
+extension JsonValue {
+    fileprivate var sendableValue: (any Sendable)? {
+        switch self {
+        case .string(let value): value
+        case .int(let value): value
+        case .double(let value): value
+        case .bool(let value): value
+        case .null: nil
+        case .array(let values): values.map(\.sendableValue)
+        case .object(let values): values.mapValues(\.sendableValue)
         }
     }
 }
