@@ -20,6 +20,35 @@ permissions:
   contents: read
 
 jobs:
+  api-contracts:
+    name: API contract tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Cache API package build
+        uses: actions/cache@v6
+        with:
+          path: Packages/WgerAPI/.build
+          key: >-
+            wger-api-linux-${{
+            hashFiles(
+              'Packages/WgerAPI/Package.swift',
+              'Packages/WgerAPI/Package.resolved',
+              'Packages/WgerAPI/Sources/WgerAPI/openapi-generator-config.yaml',
+              'Packages/WgerAPI/Sources/WgerAPI/openapi.json'
+            )
+            }}
+
+      - name: Check Swift toolchain
+        run: swift --version
+
+      - name: Run generated API contract tests
+        run: swift test --package-path Packages/WgerAPI
+
   check:
     name: Format, build, and test
     runs-on: macos-26
