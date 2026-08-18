@@ -69,6 +69,29 @@ nonisolated struct WgerIngredient: Equatable, Sendable {
     let carbohydrates: String
     let fat: String
     let weightUnits: [WgerIngredientWeightUnit]
+    let thumbnailURL: URL?
+
+    init(
+        id: Int,
+        name: String,
+        brand: String?,
+        energy: Int,
+        protein: String,
+        carbohydrates: String,
+        fat: String,
+        weightUnits: [WgerIngredientWeightUnit],
+        thumbnailURL: URL? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.brand = brand
+        self.energy = energy
+        self.protein = protein
+        self.carbohydrates = carbohydrates
+        self.fat = fat
+        self.weightUnits = weightUnits
+        self.thumbnailURL = thumbnailURL
+    }
 }
 
 nonisolated struct WgerIngredientWeightUnit: Equatable, Sendable {
@@ -154,7 +177,8 @@ extension Components.Schemas.IngredientInfo {
             fat: fat,
             weightUnits: weightUnits.map {
                 WgerIngredientWeightUnit(id: $0.id, grams: $0.gram, name: $0.name)
-            }
+            },
+            thumbnailURL: thumbnails.flatMap { URL(string: $0.value1.small) }
         )
     }
 }
